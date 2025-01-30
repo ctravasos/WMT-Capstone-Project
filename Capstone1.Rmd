@@ -24,11 +24,15 @@ stanford_demographics <- read_excel("C:/Users/localuser/OneDrive - nd.edu/Spring
 head(stanford_demographics)
 ```
 
-
 ```{r}
-insights <- read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/OUTPUT - Stanford '24 - Insights.csv")
-placement_insights <- read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/OUTPUT - Stanford '24 Placement Insights.csv")
-demographics <- read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/OUTPUT Stanford '24 Demographics.csv")
+stanford_insights <- read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/OUTPUT - Stanford '24 - Insights.csv")
+stanford_placement_insights <- read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/OUTPUT - Stanford '24 Placement Insights.csv")
+stanford_demographics <- read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/OUTPUT Stanford '24 Demographics.csv")
+
+stanford_insights <- read.csv("C:/users/cstra/capstone/OUTPUT - Stanford '24 - Insights.csv")
+stanford_placement_insights <- read.csv("C:/users/cstra/capstone/OUTPUT - Stanford '24 Placement Insights.csv")
+stanford_demographics <- read.csv("C:/users/cstra/capstone/OUTPUT Stanford '24 Demographics.csv")
+
 ```
 
 test
