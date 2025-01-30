@@ -35,6 +35,3 @@ stanford_demographics <- read.csv("C:/users/cstra/capstone/OUTPUT Stanford '24 D
 
 ```
 
-test
-
-STefan
