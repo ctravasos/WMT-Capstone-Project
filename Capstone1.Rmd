@@ -13,25 +13,26 @@ knitr::opts_chunk$set(echo = TRUE)
 # gonna have to do this for everyones file path
 
 ```{r}
-#saved all files as excel
+#cherf - saved all files as excel
 stanford_insights <- read_excel("C:/Users/localuser/OneDrive - nd.edu/Spring 2025/Sports Capstone/OUTPUT - Stanford '24 - Insights.xlsx")
 head(standford_insights)
-  
 stanford_placement_insights <- read_excel("C:/Users/localuser/OneDrive - nd.edu/Spring 2025/Sports Capstone/OUTPUT - Stanford '24 Placement Insights.xlsx")
 head(stanford_placement_insights)
-
 stanford_demographics <- read_excel("C:/Users/localuser/OneDrive - nd.edu/Spring 2025/Sports Capstone/OUTPUT Stanford '24 Demographics.xlsx")
 head(stanford_demographics)
-```
-
-```{r}
+#stef
 stanford_insights <- read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/OUTPUT - Stanford '24 - Insights.csv")
 stanford_placement_insights <- read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/OUTPUT - Stanford '24 Placement Insights.csv")
 stanford_demographics <- read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/OUTPUT Stanford '24 Demographics.csv")
-
+#collin
 stanford_insights <- read.csv("C:/users/cstra/capstone/OUTPUT - Stanford '24 - Insights.csv")
 stanford_placement_insights <- read.csv("C:/users/cstra/capstone/OUTPUT - Stanford '24 Placement Insights.csv")
 stanford_demographics <- read.csv("C:/users/cstra/capstone/OUTPUT Stanford '24 Demographics.csv")
+#adam
+
+#steffe
+
+#marinos
 
 ```
 
