@@ -13,6 +13,19 @@ knitr::opts_chunk$set(echo = TRUE)
 # gonna have to do this for everyones file path
 
 ```{r}
+#saved all files as excel
+stanford_insights <- read_excel("C:/Users/localuser/OneDrive - nd.edu/Spring 2025/Sports Capstone/OUTPUT - Stanford '24 - Insights.xlsx")
+head(standford_insights)
+  
+stanford_placement_insights <- read_excel("C:/Users/localuser/OneDrive - nd.edu/Spring 2025/Sports Capstone/OUTPUT - Stanford '24 Placement Insights.xlsx")
+head(stanford_placement_insights)
+
+stanford_demographics <- read_excel("C:/Users/localuser/OneDrive - nd.edu/Spring 2025/Sports Capstone/OUTPUT Stanford '24 Demographics.xlsx")
+head(stanford_demographics)
+```
+
+
+```{r}
 load("C:/users/cstra/caostone/OUTPUT - Stanford '24 - Insights.csv")
 load("C:/users/cstra/capstone/OUTPUT - Stanford '24 Placement Insights.csv")
 load("C:/users/cstra/capstone/OUTPUT Stanford '24 Demographics.csv")
