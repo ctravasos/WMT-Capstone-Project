@@ -26,10 +26,9 @@ head(stanford_demographics)
 
 
 ```{r}
-read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/OUTPUT - Stanford '24 - Insights.csv")
-read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/OUTPUT - Stanford '24 Placement Insights.csv")
-read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/OUTPUT Stanford '24 Demographics.csv")
-
+insights <- read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/OUTPUT - Stanford '24 - Insights.csv")
+placement_insights <- read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/OUTPUT - Stanford '24 Placement Insights.csv")
+demographics <- read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/OUTPUT Stanford '24 Demographics.csv")
 ```
 
 test
