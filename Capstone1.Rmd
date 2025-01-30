@@ -1,0 +1,22 @@
+---
+title: "Capstone"
+author: "Collin"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## load in code
+# gonna have to do this for everyones file path
+
+```{r}
+load("C:/users/cstra/caostone/OUTPUT - Stanford '24 - Insights.csv")
+load("C:/users/cstra/capstone/OUTPUT - Stanford '24 Placement Insights.csv")
+load("C:/users/cstra/capstone/OUTPUT Stanford '24 Demographics.csv")
+
+```
+
+test
