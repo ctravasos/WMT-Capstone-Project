@@ -1,6 +1,6 @@
 ---
 title: "Capstone"
-author: "Collin"
+author: "Elizabeth Cherrf, Stefan Lechmanik, Adam El-Kadi, Ryan Steffe, Mitchell Marinos, & Collin Travasos"
 date: "`r Sys.Date()`"
 output: html_document
 ---
