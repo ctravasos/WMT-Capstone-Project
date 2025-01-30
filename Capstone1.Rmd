@@ -26,9 +26,9 @@ head(stanford_demographics)
 
 
 ```{r}
-load("C:/users/cstra/caostone/OUTPUT - Stanford '24 - Insights.csv")
-load("C:/users/cstra/capstone/OUTPUT - Stanford '24 Placement Insights.csv")
-load("C:/users/cstra/capstone/OUTPUT Stanford '24 Demographics.csv")
+read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/OUTPUT - Stanford '24 - Insights.csv")
+read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/OUTPUT - Stanford '24 Placement Insights.csv")
+read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/OUTPUT Stanford '24 Demographics.csv")
 
 ```
 
