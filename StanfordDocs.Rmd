@@ -1,0 +1,109 @@
+---
+title: "StanfordOutputs"
+author: "Adam El-Kadi"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(dplyr)
+
+#Adams Path
+#PlacementInsights <- read.csv('~/Desktop/Capstone/Stanford Data/StanfordPlacementInsights.csv')
+#Demographics <- read.csv('~/Desktop/Capstone/Stanford Data/StanfordDemographics.csv')
+#Insights <- read.csv('~/Desktop/Capstone/Stanford Data/StanfordInsights.csv')
+```
+
+```{r}
+summary(PlacementInsights)
+```
+
+```{r}
+#Finding out all Publishing Platforms and printing their distributions
+unique(PlacementInsights$PublisherPlatform)
+facebook_interactions <- sum(PlacementInsights$PublisherPlatform == "facebook")
+instagram_interactions <- sum(PlacementInsights$PublisherPlatform == "instagram")
+messenger_interactions <- sum(PlacementInsights$PublisherPlatform == "messenger")
+audnet_interactions <- sum(PlacementInsights$PublisherPlatform == "audience_network")
+print(paste('The interactions numbers are as follows: facebook - ', facebook_interactions, 
+            'instagram - ', instagram_interactions,
+            'messenger - ', messenger_interactions, 
+            'audience network interactions - ', audnet_interactions))
+```
+
+```{r}
+#Finding out the proportions of these distributions
+total_interactions <- facebook_interactions + instagram_interactions + messenger_interactions + audnet_interactions
+
+facebook_pct <- (facebook_interactions / total_interactions) * 100
+instagram_pct <- (instagram_interactions / total_interactions) * 100
+messenger_pct <- (messenger_interactions / total_interactions) * 100
+audnet_pct <- (audnet_interactions / total_interactions) * 100
+
+print(sprintf("The interaction percentages are as follows: Facebook - %.2f%%, Instagram - %.2f%%, Messenger - %.2f%%, Audience Network - %.2f%%", facebook_pct, instagram_pct, messenger_pct, audnet_pct))
+```
+
+```{r}
+#Showing average statistics among each combination of Device and Publisher Platforms
+PlacementInsights %>%
+  group_by(DevicePlatform, PublisherPlatform) %>%
+  summarise(
+    avg_CTR = mean(CTR, na.rm = TRUE),
+    avg_Impressions = mean(Impressions, na.rm = TRUE),
+    avg_Clicks = mean(Clicks, na.rm = TRUE),
+    avg_LinkClicks = mean(Link.Clicks, na.rm = TRUE),
+    count = n()
+  ) %>%
+  arrange(desc(avg_CTR))
+```
+
+
+```{r}
+#Plot showing the Impressions vs clicks, categorized by platforms
+ggplot(PlacementInsights, aes(x = Impressions, y = Clicks, color = PublisherPlatform)) +
+  geom_point(alpha = 0.7) +
+  theme_minimal() +
+  labs(title = "Impressions vs Clicks by Publisher Platform", x = "Impressions", y = "Clicks")
+```
+
+```{r}
+#Plot converying Click-Through-Rate by Impressions
+ggplot(PlacementInsights, aes(x = Impressions, y = CTR, color = DevicePlatform)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  theme_minimal() +
+  ylim(0, 50) +
+  labs(title = "CTR vs Impressions", x = "Impressions", y = "CTR")
+```
+
+```{r}
+#Top Performing Device-Publisher Combinations
+PlacementInsights %>%
+  group_by(DevicePlatform, PublisherPlatform) %>%
+  summarise(
+    avg_CTR = mean(CTR, na.rm = TRUE),
+    avg_Clicks = mean(Clicks, na.rm = TRUE)
+  ) %>%
+  filter(avg_CTR > 1) %>%
+  arrange(desc(avg_CTR))
+```
+
+```{r}
+#Which Publisher Has the Highest CTR on Average
+PlacementInsights %>%
+  group_by(PublisherPlatform) %>%
+  summarise(mean_CTR = mean(CTR, na.rm = TRUE)) %>%
+  arrange(desc(mean_CTR))
+```
+
+```{r}
+#A simple linear regression to analyze what impacts CTR:
+model <- lm(CTR ~ Impressions + Clicks + Link.Clicks + DevicePlatform + PublisherPlatform, data = PlacementInsights)
+summary(model)
+```
+
