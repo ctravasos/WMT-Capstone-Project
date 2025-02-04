@@ -34,5 +34,22 @@ stanford_demographics <- read.csv("C:/users/cstra/capstone/OUTPUT Stanford '24 D
 
 #marinos
 
+
+
+
+```
+
+```{r}
+###Grouping by Age and Gender
+stanford_demographics_age_gender_groups <- stanford_demographics %>% 
+  group_by(Age, Gender) %>% 
+  summarise(
+    total_reach = sum(Reach, na.rm = TRUE),
+    total_impressions = sum(Impressions, na.rm = TRUE),
+    total_link_clicks = sum(LinkClicks, na.rm = TRUE)
+  )
+
+print(stanford_demographics_age_gender_groups)
+
 ```
 
