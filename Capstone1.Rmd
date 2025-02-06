@@ -29,7 +29,9 @@ stanford_insights <- read.csv("C:/users/cstra/capstone/OUTPUT - Stanford '24 - I
 stanford_placement_insights <- read.csv("C:/users/cstra/capstone/OUTPUT - Stanford '24 Placement Insights.csv")
 stanford_demographics <- read.csv("C:/users/cstra/capstone/OUTPUT Stanford '24 Demographics.csv")
 #adam
-
+PlacementInsights <- read.csv('~/Desktop/Capstone/Stanford Data/StanfordPlacementInsights.csv')
+Demographics <- read.csv('~/Desktop/Capstone/Stanford Data/StanfordDemographics.csv')
+Insights <- read.csv('~/Desktop/Capstone/Stanford Data/StanfordInsights.csv')
 #steffe
 
 #marinos
