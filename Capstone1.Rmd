@@ -55,3 +55,21 @@ print(stanford_demographics_age_gender_groups)
 
 ```
 
+
+```{r}
+
+
+stanford_demographics$CampaignStartDate <- as.Date(stanford_demographics$CampaignStartTime)
+stanford_demographics$CampaignEndDate <- as.Date(stanford_demographics$CampaignEndTime)
+
+
+head(stanford_demographics[, c("CampaignStartDate", "CampaignEndDate")])
+
+
+stanford_demographics$CampaignDuration <- as.numeric(difftime(stanford_demographics$CampaignEndDate, stanford_demographics$CampaignStartDate, units="days"))
+
+
+print(stanford_demographics[, c("CampaignStartDate", "CampaignEndDate", "CampaignDuration")])
+
+
+```
