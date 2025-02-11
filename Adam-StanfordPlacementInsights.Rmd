@@ -118,3 +118,22 @@ summary(impressions_model)
 vif(impression_model)
 #All GVIF^(1/(2*Df)) values are close to 1, meaning there's minimal multicollinearity.
 ```
+
+```{r}
+ggplot(PlacementInsights, aes(log(Impressions+1), CTR)) + geom_point() + theme_bw()
+```
+
+```{r}
+ggplot(PlacementInsights, aes(log(Impressions+1), Link.Clicks)) + geom_point() + theme_bw()
+```
+
+```{r}
+#summary(PlacementInsights$Impressions)
+```
+
+```{r}
+PlacementInsights$LCTR <- PlacementInsights$Link.Clicks/PlacementInsights$Impressions
+PlacementInsights$LCTR[is.infinite(PlacementInsights$LCTR)] <- 0
+#summary(PlacementInsights$LCTR)
+ggplot(PlacementInsights, aes(log(Impressions+1), LCTR)) + geom_point() + theme_bw()
+```
