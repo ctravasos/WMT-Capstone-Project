@@ -102,8 +102,19 @@ PlacementInsights %>%
 ```
 
 ```{r}
-#A simple linear regression to analyze what impacts CTR:
-model <- lm(CTR ~ Impressions + Clicks + Link.Clicks + DevicePlatform + PublisherPlatform, data = PlacementInsights)
-summary(model)
+#A simple linear regression to analyze what impacts Impressions
+impressions_model <- lm(Impressions ~ CTR + Link.Clicks + DevicePlatform + PublisherPlatform, data = PlacementInsights)
+summary(impressions_model)
+
+#CTR (-4.49, p < 0.001): A negative relationship with Impressions, suggesting that a higher CTR leads to fewer impressions, possibly due to optimization in ad delivery. The CTR's negative effect suggests that when users engage more (higher CTR), the system may optimize by reducing impressions or reallocating budget elsewhere.
+
+#Link.Clicks (62.14, p < 0.001): A strong positive effect, meaning more link clicks result in more impressions.
+
+#DevicePlatform (mobile_app: 96.45, p < 0.001): Ads shown on mobile apps receive significantly more impressions.
 ```
 
+
+```{r}
+vif(impression_model)
+#All GVIF^(1/(2*Df)) values are close to 1, meaning there's minimal multicollinearity.
+```
