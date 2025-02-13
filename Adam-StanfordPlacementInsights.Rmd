@@ -137,3 +137,16 @@ PlacementInsights$LCTR[is.infinite(PlacementInsights$LCTR)] <- 0
 #summary(PlacementInsights$LCTR)
 ggplot(PlacementInsights, aes(log(Impressions+1), LCTR)) + geom_point() + theme_bw()
 ```
+
+Groups by campaignId and campaign name -- with LCTR
+```{r}
+Campaign_Grouped <- PlacementInsights %>%
+  group_by(CampaignId, CampaignName) %>%
+  summarise(
+    avg_LCTR = mean(LCTR, na.rm = TRUE),
+    avg_Clicks = mean(Clicks, na.rm = TRUE)
+  ) %>%
+  arrange(desc(avg_LCTR))
+
+```
+
