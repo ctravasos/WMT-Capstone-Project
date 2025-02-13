@@ -12,15 +12,16 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(tidyverse)
 library(dplyr)
+library(car)
 
 #Adams Path
-#PlacementInsights <- read.csv('~/Desktop/Capstone/Stanford Data/StanfordPlacementInsights.csv')
-#Demographics <- read.csv('~/Desktop/Capstone/Stanford Data/StanfordDemographics.csv')
-#Insights <- read.csv('~/Desktop/Capstone/Stanford Data/StanfordInsights.csv')
+PlacementInsights <- read.csv('~/Desktop/Capstone/Stanford Data/StanfordPlacementInsights.csv')
+Demographics <- read.csv('~/Desktop/Capstone/Stanford Data/StanfordDemographics.csv')
+Insights <- read.csv('~/Desktop/Capstone/Stanford Data/StanfordInsights.csv')
 ```
 
 ```{r}
-summary(PlacementInsights)
+#summary(PlacementInsights)
 ```
 
 ```{r}
@@ -72,13 +73,58 @@ ggplot(PlacementInsights, aes(x = Impressions, y = Clicks, color = PublisherPlat
 ```
 
 ```{r}
-#Plot converying Click-Through-Rate by Impressions
+#Plot conveying Click-Through-Rate by Impressions
 ggplot(PlacementInsights, aes(x = Impressions, y = CTR, color = DevicePlatform)) +
   geom_point() +
   geom_smooth(method = "lm", se = FALSE) +
   theme_minimal() +
   ylim(0, 50) +
   labs(title = "CTR vs Impressions", x = "Impressions", y = "CTR")
+```
+
+
+```{r}
+#Which Publisher Has the Highest CTR on Average
+PlacementInsights %>%
+  group_by(PublisherPlatform) %>%
+  summarise(mean_CTR = mean(CTR, na.rm = TRUE)) %>%
+  arrange(desc(mean_CTR))
+```
+
+
+```{r}
+impressions_model <- lm(Impressions ~ CTR + Link.Clicks + DevicePlatform + PublisherPlatform, data = PlacementInsights[PlacementInsights$CTR < 20,])
+summary(impressions_model)
+```
+
+### CTR (-4.49, p < 0.001): A negative relationship with Impressions, suggesting that a higher CTR leads to fewer impressions, possibly due to optimization in ad delivery. The CTR's negative effect suggests that when users engage more (higher CTR), the system may optimize by reducing impressions or reallocating budget elsewhere.
+
+### Link.Clicks (62.14, p < 0.001): A strong positive effect, meaning more link clicks result in more impressions.
+
+### DevicePlatform (mobile_app: 96.45, p < 0.001): Ads shown on mobile apps receive significantly more impressions.
+
+```{r}
+vif(impressions_model)
+```
+### All GVIF^(1/(2*Df)) values are close to 1, meaning there's minimal multicollinearity.
+
+```{r}
+ggplot(PlacementInsights, aes(log(Impressions+1), CTR)) + geom_point() + theme_bw()
+```
+
+```{r}
+ggplot(PlacementInsights, aes(log(Impressions+1), Link.Clicks)) + geom_point() + theme_bw()
+```
+
+```{r}
+#summary(PlacementInsights$Impressions)
+```
+
+```{r}
+PlacementInsights$LCTR <- PlacementInsights$Link.Clicks/PlacementInsights$Impressions
+PlacementInsights$LCTR[is.infinite(PlacementInsights$LCTR)] <- 0
+#summary(PlacementInsights$LCTR)
+ggplot(PlacementInsights, aes(log(Impressions+1), LCTR)) + geom_point() + theme_bw()
 ```
 
 ```{r}
@@ -102,40 +148,28 @@ PlacementInsights %>%
 ```
 
 ```{r}
-#A simple linear regression to analyze what impacts Impressions
-impressions_model <- lm(Impressions ~ CTR + Link.Clicks + DevicePlatform + PublisherPlatform, data = PlacementInsights)
-summary(impressions_model)
-
-#CTR (-4.49, p < 0.001): A negative relationship with Impressions, suggesting that a higher CTR leads to fewer impressions, possibly due to optimization in ad delivery. The CTR's negative effect suggests that when users engage more (higher CTR), the system may optimize by reducing impressions or reallocating budget elsewhere.
-
-#Link.Clicks (62.14, p < 0.001): A strong positive effect, meaning more link clicks result in more impressions.
-
-#DevicePlatform (mobile_app: 96.45, p < 0.001): Ads shown on mobile apps receive significantly more impressions.
+# Lets rerun some of the CTR functions with the new LCTR
+# Top Performing Device-Publisher Combinations
+PlacementInsights %>%
+  group_by(DevicePlatform, PublisherPlatform) %>%
+  summarise(
+    avg_LCTR = mean(LCTR, na.rm = TRUE),
+    avg_Link.Clicks = mean(Link.Clicks, na.rm = TRUE)
+  ) %>%
+  arrange(desc(avg_LCTR))
 ```
 
+# Recommendations:
+# Focus ad spend on Facebook mobile app for maximum clicks.
+# Improve Instagram engagement, especially on mobile web.
+# Consider optimizing ad content or targeting strategy for Messenger, as it's currently yielding no clicks.
+# Leverage Audience Network on desktop for high CTR efficiency in niche targeting.
 
 ```{r}
-vif(impression_model)
-#All GVIF^(1/(2*Df)) values are close to 1, meaning there's minimal multicollinearity.
-```
-
-```{r}
-ggplot(PlacementInsights, aes(log(Impressions+1), CTR)) + geom_point() + theme_bw()
-```
-
-```{r}
-ggplot(PlacementInsights, aes(log(Impressions+1), Link.Clicks)) + geom_point() + theme_bw()
-```
-
-```{r}
-#summary(PlacementInsights$Impressions)
-```
-
-```{r}
-PlacementInsights$LCTR <- PlacementInsights$Link.Clicks/PlacementInsights$Impressions
-PlacementInsights$LCTR[is.infinite(PlacementInsights$LCTR)] <- 0
-#summary(PlacementInsights$LCTR)
-ggplot(PlacementInsights, aes(log(Impressions+1), LCTR)) + geom_point() + theme_bw()
+PlacementInsights %>%
+  group_by(PublisherPlatform) %>%
+  summarise(mean_LCTR = mean(LCTR, na.rm = TRUE)) %>%
+  arrange(desc(mean_LCTR))
 ```
 
 Groups by campaignId and campaign name -- with LCTR
@@ -147,6 +181,5 @@ Campaign_Grouped <- PlacementInsights %>%
     avg_Clicks = mean(Clicks, na.rm = TRUE)
   ) %>%
   arrange(desc(avg_LCTR))
-
 ```
 
