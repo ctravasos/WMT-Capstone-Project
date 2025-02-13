@@ -183,3 +183,62 @@ Campaign_Grouped <- PlacementInsights %>%
   arrange(desc(avg_LCTR))
 ```
 
+Bar chart by Campaign Id -- Let's look at sport
+```{r}
+ggplot(Campaign_Grouped, aes(x = reorder(CampaignId, avg_LCTR), y = avg_LCTR)) +
+  geom_bar(stat = "identity", fill = "blue") +
+  labs(title = "Average LCTR by Campaign", x = "Campaign Name", y = "Average LCTR") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+Group by Sport
+```{r}
+library(dplyr)
+library(ggplot2)
+library(stringr)  # For str_detect()
+
+sports_data <- PlacementInsights %>%
+  mutate(Sport = case_when(
+    str_detect(CampaignName, "MBB|Men's Basketball") ~ "Men's Basketball",
+    str_detect(CampaignName, "WBB|Women's Basketball") ~ "Women's Basketball",
+    str_detect(CampaignName, "FB|Football") ~ "Football",
+    str_detect(CampaignName, "SB|Softball") ~ "Softball",
+    str_detect(CampaignName, "BSB|Baseball") ~ "Baseball",
+    str_detect(CampaignName, "MS|Men's Soccer") ~ "Men's Soccer",
+    str_detect(CampaignName, "WS|Women's Soccer") ~ "Women's Soccer",
+    str_detect(CampaignName, "V24|Volleyball") ~ "Volleyball",
+    str_detect(CampaignName, "WG|Gymnastics") ~ "Gymnastics",
+    str_detect(CampaignName, "MWP|Water Polo") ~ "Water Polo",
+    str_detect(CampaignName, "Track|XC") ~ "Track & Field / XC",
+    TRUE ~ "Other"
+  ))
+
+```
+
+Add Groups in for Bar Chart
+```{r}
+Grouped_Sports <- sports_data %>%
+  group_by(Sport) %>%
+  summarise(
+    avg_LCTR = mean(LCTR, na.rm = TRUE),
+    avg_Clicks = mean(Clicks, na.rm = TRUE),
+    count = n()  # Count number of campaigns per sport
+  ) %>%
+  arrange(desc(avg_LCTR))
+
+head(Grouped_Sports)
+
+```
+
+```{r}
+ggplot(Grouped_Sports, aes(x = reorder(Sport, avg_LCTR), y = avg_LCTR)) +
+  geom_bar(stat = "identity", fill = "blue") +
+  labs(title = "Average LCTR by Sport", x = "Sport", y = "Average LCTR") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate labels for readability
+
+```
+
+
