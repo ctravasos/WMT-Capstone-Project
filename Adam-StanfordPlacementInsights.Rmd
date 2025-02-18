@@ -268,6 +268,12 @@ ggplot(Grouped_Sports_sorted,
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
+```{r}
+Limpressions_model <- lm(Impressions ~ LCTR + Link.Clicks + DevicePlatform + PublisherPlatform, data = PlacementInsights[PlacementInsights$LCTR < 20,])
+summary(Limpressions_model)
+```
+
+# Big Goal: Build a model on ROI, maybe monetize clicks 
 
 
 
