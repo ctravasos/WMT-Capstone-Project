@@ -240,5 +240,35 @@ ggplot(Grouped_Sports, aes(x = reorder(Sport, avg_LCTR), y = avg_LCTR)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))  # Rotate labels for readability
 
 ```
+Looks at impressions by sport
+```{r}
+Grouped_Sports <- sports_data %>%
+  group_by(Sport, CampaignName, AdsetName) %>%
+  summarise(
+    avg_LCTR = mean(LCTR, na.rm = TRUE),
+    avg_Clicks = mean(Clicks, na.rm = TRUE),
+    avg_impressions = mean(Impressions),
+    count = n(), # Count number of campaigns per sport
+  ) %>%
+  arrange(desc(avg_LCTR))
+
+head(Grouped_Sports)
+```
+
+```{r}
+Grouped_Sports_sorted <- Grouped_Sports %>%
+  filter(Sport != "Other") %>%
+  arrange(desc(avg_impressions))  # Ensure data is sorted correctly
+
+ggplot(Grouped_Sports_sorted, 
+       aes(x = reorder(Sport, avg_impressions), y = avg_impressions)) +  # Correct sorting
+  geom_bar(stat = "identity", fill = "blue") +
+  labs(title = "Average Impression by Sport", x = "Sport", y = "Average Impressions") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+
 
 
