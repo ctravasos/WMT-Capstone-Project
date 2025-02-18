@@ -267,6 +267,34 @@ ggplot(Grouped_Sports_sorted,
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
+Take out other (for now)
+```{r}
+Grouped_Sports_sorted <- Grouped_Sports %>%
+  filter(Sport != "Other") %>%
+  arrange(desc(avg_LCTR))  # Ensure data is sorted correctly
+
+ggplot(Grouped_Sports_sorted, 
+       aes(x = reorder(Sport, avg_LCTR), y = avg_LCTR)) +  # Correct sorting
+  geom_bar(stat = "identity", fill = "blue") +
+  labs(title = "Average LCTR by Sport", x = "Sport", y = "Average LCTR") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+Grouped_Sports_sorted <- Grouped_Sports %>%
+  filter(Sport != "Other") %>%
+  arrange(desc(avg_impressions))  # Ensure data is sorted correctly
+
+ggplot(Grouped_Sports_sorted, 
+       aes(x = reorder(Sport, avg_impressions), y = avg_impressions)) +  # Correct sorting
+  geom_bar(stat = "identity", fill = "blue") +
+  labs(title = "Average Impression by Sport", x = "Sport", y = "Average Impressions") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
 
 ```{r}
 Limpressions_model <- lm(Impressions ~ LCTR + Link.Clicks + DevicePlatform + PublisherPlatform, data = PlacementInsights[PlacementInsights$LCTR < 20,])
