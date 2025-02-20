@@ -304,38 +304,26 @@ summary(Limpressions_model)
 # Big Goal: Build a model on ROI, maybe monetize clicks 
 
 ```{r}
-#Checking if there is na values
-sum(is.na(Insights))
-sum(is.na(Demographics))
-sum(is.na(PlacementInsights))
-
-#Note: stanford_insights 418 NA values. The other Stanford Data sets do not have any NA values
-
-#Removing the NA Values from the stanford_insights dataset
-Insights <- na.omit(Insights)
-sum(is.na(Insights))
-
-#Grouping by 'CampaignId'
-Insights <- Insights %>%
-  group_by(CampaignId)
-Demographics <- Demographics %>%
-  group_by(CampaignID)
-PlacementInsights <- PlacementInsights %>%
-  group_by(CampaignId)
-
-#Renaming Stanford_Demographics "campaign_ID' column to 'campaign_iD' for merging purposes
-Demographics <- Demographics %>%
-  rename(CampaignId = CampaignID)
-
-#Picking columns needed
-selected_cols <- Insights %>%
-  select(Revenue_1d_click, Revenue_1d_view, Revenue_7d_click, Revenue_7d_view, Revenue_28d_click, Revenue_28d_view, Spend)
-
-#Merging
-Demographics <- Demographics %>%
-  inner_join(selected_cols, by = "CampaignId")
-PlacementInsights <- PlacementInsights %>%
-  inner_join(selected_cols, by = "CampaignId")
+c_vals <- unique(PlacementInsights[, c("CampaignId", "AdId" )])
 ```
+
+```{r}
+place_res <- as.data.frame(matrix(NA, nrow = length(c_vals), ncol = 4))
+spend <- rep(NA, length(c_vals))
+for(i in 1:length(c_vals)){
+  place_res[i,] <- colSums(PlacementInsights[which(PlacementInsights$CampaignId == c_vals$CampaignId[i] &
+                                                   PlacementInsights$AdId == c_vals$AdId[i]  ), c(11:14)])
+  spend[i] <-  sum(Demographics$Spend[which(Demographics$CampaignID == c_vals$CampaignId[i] &
+                                        PlacementInsights$AdId == c_vals$AdId[i])])
+}
+
+names(place_res)<- names(PlacementInsights)[c(11:14)]
+```
+
+
+```{r}
+res <- cbind.data.frame(c_vals, place_res, spend)
+```
+
 
 
