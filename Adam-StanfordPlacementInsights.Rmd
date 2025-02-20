@@ -309,20 +309,29 @@ c_vals <- unique(PlacementInsights[, c("CampaignId", "AdId" )])
 
 ```{r}
 place_res <- as.data.frame(matrix(NA, nrow = length(c_vals), ncol = 4))
+revenue <- as.data.frame(matrix(NA, nrow = length(c_vals), ncol = 6))
+
 spend <- rep(NA, length(c_vals))
+#revenue <- rep(NA, length(c_vals))
+
+
 for(i in 1:length(c_vals)){
   place_res[i,] <- colSums(PlacementInsights[which(PlacementInsights$CampaignId == c_vals$CampaignId[i] &
                                                    PlacementInsights$AdId == c_vals$AdId[i]  ), c(11:14)])
   spend[i] <-  sum(Demographics$Spend[which(Demographics$CampaignID == c_vals$CampaignId[i] &
-                                        PlacementInsights$AdId == c_vals$AdId[i])])
+                                        Demographics$AdId == c_vals$AdId[i])])
+  revenue[i,] <- colSums(Insights[which(Insights$CampaignId == c_vals$CampaignId[i] &
+                                                   Insights$AdId == c_vals$AdId[i]  ), c(27:32)])
+  
 }
 
 names(place_res)<- names(PlacementInsights)[c(11:14)]
+names(revenue) <- names(Insights)[c(27:32)]
 ```
 
 
 ```{r}
-res <- cbind.data.frame(c_vals, place_res, spend)
+res <- cbind.data.frame(c_vals, place_res, spend, revenue)
 ```
 
 
