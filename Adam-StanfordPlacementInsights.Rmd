@@ -332,6 +332,12 @@ names(revenue) <- names(Insights)[c(27:32)]
 
 ```{r}
 res <- cbind.data.frame(c_vals, place_res, spend, revenue)
+res$viewroi28 <- (res$Revenue_28d_view-res$spend)/res$spend
+res$viewroi7 <- (res$Revenue_7d_view-res$spend)/res$spend
+res$viewroi1 <- (res$Revenue_1d_view-res$spend)/res$spend
+res$clickroi28 <- (res$Revenue_28d_click-res$spend)/res$spend
+res$clickroi7 <- (res$Revenue_7d_click-res$spend)/res$spend
+res$clickroi1 <- (res$Revenue_1d_click-res$spend)/res$spend
 ```
 
 
