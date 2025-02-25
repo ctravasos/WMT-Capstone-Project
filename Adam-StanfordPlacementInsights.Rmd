@@ -304,41 +304,75 @@ summary(Limpressions_model)
 # Big Goal: Build a model on ROI, maybe monetize clicks 
 
 ```{r}
-c_vals <- unique(PlacementInsights[, c("CampaignId", "AdId" )])
+PlacementInsightsSummary <- PlacementInsights %>% 
+  group_by(CampaignId, AdId) %>% 
+  summarise(Impressions = sum(Impressions, na.rm = T), 
+            Reach = sum(Reach, na.rm = T),
+            Clicks = sum(Clicks, na.rm = T),
+            Link.Clicks = sum(Link.Clicks, na.rm = T))
+
+
+```
+```{r}
+# Insights Money Building
+InsightsSummary <- Insights %>% 
+  group_by(CampaignId, AdId) %>% 
+  summarise(Revenue_28d_click = sum(Revenue_28d_click, na.rm = T), 
+            Revenue_28d_view = sum(Revenue_28d_view, na.rm = T),
+            Revenue_7d_click = sum(Revenue_7d_click, na.rm = T),
+            Revenue_7d_view = sum(Revenue_7d_view, na.rm = T),
+            Revenue_1d_click = sum(Revenue_1d_click, na.rm = T), 
+            Revenue_1d_view = sum(Revenue_1d_view, na.rm = T))
+
+# Demographics Money Building
+DemographicsSummary <- Demographics %>% 
+  group_by(CampaignID, AdId) %>% 
+  summarise(Spend = sum(Spend, na.rm = T))
+DemographicsSummary$CampaignId <- DemographicsSummary$CampaignID
+
+tmp <- full_join(InsightsSummary, PlacementInsightsSummary, by = c("CampaignId", "AdId"))
+tmp2 <- full_join(tmp, DemographicsSummary, by = c("CampaignId", "AdId"))
+tmp3 <- tmp2[9:123,]
+```
+
+
+```{r}
+tmp3$viewroi28 <- (tmp3$Revenue_28d_view - tmp3$Spend) / tmp3$Spend
+tmp3$viewroi7 <- (tmp3$Revenue_7d_view - tmp3$Spend) / tmp3$Spend
+tmp3$viewroi1 <- (tmp3$Revenue_1d_view - tmp3$Spend) / tmp3$Spend
+tmp3$clickroi28 <- (tmp3$Revenue_28d_click - tmp3$Spend) / tmp3$Spend
+tmp3$clickroi7 <- (tmp3$Revenue_7d_click - tmp3$Spend) / tmp3$Spend
+tmp3$clickroi1 <- (tmp3$Revenue_1d_click - tmp3$Spend) / tmp3$Spend
+```
+
+
+```{r}
+model_28dclick <- lm(clickroi28 ~ Impressions + Revenue_28d_click + Reach + Clicks + Link.Clicks + Spend, tmp3)
+summary(model_28dclick)
 ```
 
 ```{r}
-place_res <- as.data.frame(matrix(NA, nrow = length(c_vals), ncol = 4))
-revenue <- as.data.frame(matrix(NA, nrow = length(c_vals), ncol = 6))
-
-spend <- rep(NA, length(c_vals))
-#revenue <- rep(NA, length(c_vals))
-
-
-for(i in 1:length(c_vals)){
-  place_res[i,] <- colSums(PlacementInsights[which(PlacementInsights$CampaignId == c_vals$CampaignId[i] &
-                                                   PlacementInsights$AdId == c_vals$AdId[i]  ), c(11:14)])
-  spend[i] <-  sum(Demographics$Spend[which(Demographics$CampaignID == c_vals$CampaignId[i] &
-                                        Demographics$AdId == c_vals$AdId[i])])
-  revenue[i,] <- colSums(Insights[which(Insights$CampaignId == c_vals$CampaignId[i] &
-                                                   Insights$AdId == c_vals$AdId[i]  ), c(27:32)])
-  
-}
-
-names(place_res)<- names(PlacementInsights)[c(11:14)]
-names(revenue) <- names(Insights)[c(27:32)]
+model_28dview <- lm(viewroi28 ~ Impressions + Revenue_28d_view + Reach + Clicks + Link.Clicks + Spend, tmp3)
+summary(model_28dview)
 ```
-
 
 ```{r}
-res <- cbind.data.frame(c_vals, place_res, spend, revenue)
-res$viewroi28 <- (res$Revenue_28d_view-res$spend)/res$spend
-res$viewroi7 <- (res$Revenue_7d_view-res$spend)/res$spend
-res$viewroi1 <- (res$Revenue_1d_view-res$spend)/res$spend
-res$clickroi28 <- (res$Revenue_28d_click-res$spend)/res$spend
-res$clickroi7 <- (res$Revenue_7d_click-res$spend)/res$spend
-res$clickroi1 <- (res$Revenue_1d_click-res$spend)/res$spend
+model_7dclick <- lm(clickroi7 ~ Impressions + Revenue_7d_click + Reach + Clicks + Link.Clicks + Spend, tmp3)
+summary(model_7dclick)
 ```
 
+```{r}
+model_7dview <- lm(viewroi7 ~ Impressions + Revenue_7d_view + Reach + Clicks + Link.Clicks + Spend, tmp3)
+summary(model_7dview)
+```
 
+```{r}
+model_1dclick <- lm(clickroi1 ~ Impressions + Revenue_1d_click + Reach + Clicks + Link.Clicks + Spend, tmp3)
+summary(model_1dclick)
+```
+
+```{r}
+model_1dview <- lm(viewroi28 ~ Impressions + Revenue_28d_view + Reach + Clicks + Link.Clicks + Spend, tmp3)
+summary(model_28dview)
+```
 
