@@ -1,0 +1,107 @@
+---
+title: "Utah"
+author: "Stefan Lechmanik"
+date: "2025-03-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+utah_demographics <-read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/JMI + Utah Meta Ads Demographics 2024-2025.csv")
+```
+
+```{r}
+utah_demographics_groups <- utah_demographics %>% 
+  filter(Age!="Unknown") %>% 
+  filter(Gender != "unknown") %>% 
+  group_by(Age, Gender) %>% 
+  summarise(
+    total_reach = sum(Reach, na.rm = TRUE),
+    total_impressions = sum(Impressions, na.rm = TRUE),
+    total_link_clicks = sum(LinkClicks, na.rm = TRUE),
+    total_spend = sum(Spend)) %>% 
+   mutate(CTR = (total_link_clicks / total_impressions) * 100)
+```
+```{r}
+library(ggplot2)
+
+ggplot(utah_demographics_groups, aes(x = Age, y = total_impressions, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Impressions by Age and Gender", x = "Age Group", y = "Total Impressions") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1")
+```
+
+```{r}
+ggplot(utah_demographics_groups, aes(x = Age, y = total_link_clicks, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Link Clicks by Age and Gender", x = "Age Group", y = "Total Link Clicks") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1")
+```
+
+
+```{r}
+ggplot(utah_demographics_groups, aes(x = Age, y = total_reach, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Reach by Gender", x = "Age Group", y = "Total Reach") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1")
+```
+
+
+```{r}
+ggplot(utah_demographics_groups, aes(x = Age, y = CTR, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Click-Through Rate by Age and Gender", x = "Age Group", y = "CTR (%)") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1")
+```
+
+
+```{r}
+ggplot(utah_demographics_groups, aes(x = Age, y = total_spend, fill = Gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Total Spend by Age and Gender",
+       x = "Age Group",
+       y = "Total Spend") +
+  scale_fill_manual(values = c("female" = "#E41A1C", "male" = "#377EB8")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+
+```{r}
+
+utah_summarized_date_data <- utah_demographics %>%
+  filter(Gender %in% c("male", "female")) %>% 
+   filter(Age != "Unknown") %>% 
+  group_by(AdInsightsDate, Age, Gender) %>%
+  summarise(total_impressions = sum(Impressions, na.rm = TRUE), .groups = "drop")
+
+utah_summarized_date_data$AdInsightsDate <- as.Date(utah_summarized_date_data$AdInsightsDate)
+
+ggplot(utah_summarized_date_data, aes(x = AdInsightsDate, y = total_impressions, 
+                                       color = Gender, group = interaction(Age, Gender))) +
+  geom_area(alpha = 0.4, position = "identity") +  
+  geom_line() +  
+  facet_grid(rows = vars(Age), cols = vars(Gender), scales = "fixed") + 
+  labs(title = "Impressions Over Time by Age and Gender",
+       x = "Date",
+       y = "Total Impressions") +
+  scale_x_date(date_breaks = "1 months", date_labels = "%b %Y") +  
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Adjust plot size for R Markdown / Jupyter Notebook
+options(repr.plot.width=12, repr.plot.height=6)
+```
+

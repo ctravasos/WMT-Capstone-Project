@@ -1,0 +1,189 @@
+---
+title: "George Mason"
+author: "Stefan Lechmanik"
+date: "2025-03-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+georgemason_demographics <-read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/George Mason Meta Ads Insights by Demographis 2022 - 2025.csv")
+```
+
+```{r}
+gm_demographics_groups <- georgemason_demographics %>% 
+  filter(age!="Unknown") %>% 
+  filter(gender != "unknown") %>% 
+  group_by(age, gender) %>% 
+  summarise(
+    total_reach = sum(Reach, na.rm = TRUE),
+    total_impressions = sum(Impressions, na.rm = TRUE),
+    total_link_clicks = sum(LinkClicks, na.rm = TRUE),
+    total_spend = sum(Spend)) %>% 
+   mutate(CTR = (total_link_clicks / total_impressions) * 100)
+```
+
+```{r}
+library(ggplot2)
+
+ggplot(gm_demographics_groups, aes(x = age, y = total_impressions, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Impressions by Age and Gender", x = "Age Group", y = "Total Impressions") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1")
+```
+
+```{r}
+ggplot(gm_demographics_groups, aes(x = age, y = total_link_clicks, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Link Clicks by Age and Gender", x = "Age Group", y = "Total Link Clicks") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1")
+```
+
+```{r}
+ggplot(gm_demographics_groups, aes(x = age, y = total_reach, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Reach by Gender", x = "Age Group", y = "Total Reach") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1")
+```
+
+```{r}
+ggplot(gm_demographics_groups, aes(x = age, y = CTR, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Click-Through Rate by Age and Gender", x = "Age Group", y = "CTR (%)") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1")
+```
+
+
+```{r}
+ggplot(gm_demographics_groups, aes(x = age, y = total_spend, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Total Spend by Age and Gender",
+       x = "Age Group",
+       y = "Total Spend") +
+  scale_fill_manual(values = c("female" = "#E41A1C", "male" = "#377EB8")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+gm_summarized_date_data <- georgemason_demographics %>%
+  filter(gender %in% c("male", "female")) %>% 
+   filter(age != "Unknown") %>% 
+  group_by(date_start, age, gender) %>%
+  summarise(total_impressions = sum(Impressions, na.rm = TRUE), .groups = "drop")
+
+gm_summarized_date_data$date_start <- as.Date(gm_summarized_date_data$date_start)
+
+ggplot(gm_summarized_date_data, aes(x = date_start, y = total_impressions, 
+                                       color = gender, group = interaction(age, gender))) +
+  geom_area(alpha = 0.4, position = "identity") +  
+  geom_line() +  
+  facet_grid(rows = vars(age), cols = vars(gender), scales = "fixed") + 
+  labs(title = "Impressions Over Time by Age and Gender",
+       x = "Date",
+       y = "Total Impressions") +
+  scale_x_date(date_breaks = "6 months", date_labels = "%b %Y") +  
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# Adjust plot size for R Markdown / Jupyter Notebook
+options(repr.plot.width=12, repr.plot.height=6)
+```
+
+```{r}
+gm_demographics_sports <- georgemason_demographics %>% 
+    mutate(Sport = case_when(
+    grepl("FB", CampaignName) ~ "Football",
+    grepl("MBB", CampaignName)|grepl("MBB", AdsetName) ~ "Men's Basketball",
+    grepl("Mini", CampaignName)|grepl("Mini", AdsetName) ~ "Men's Basketball",
+    grepl("WBB", CampaignName) ~ "Women's Basketball",
+    grepl("BA", CampaignName)|grepl("Baseball", AdsetName) ~ "Baseball",
+    grepl("B22", CampaignName) ~ "Baseball",
+    grepl("B23", CampaignName) ~ "Baseball",
+    grepl("Women's Basketball", AdName) ~ "Women's Basketball",
+    grepl("Men's Basketball", AdName) ~ "Men's Basketball",
+    grepl("MBB21", AdName) ~ "Men's Basketball",
+    grepl("M24", AdName) | grepl("M24", CampaignName) ~ "Men's Basketball",  # Added CampaignName check
+    grepl("W24", AdName) | grepl("W24", CampaignName) ~ "Women's Basketball",  # Added CampaignName check
+    grepl("22FB", AdName) | grepl("F22", CampaignName) ~ "Football",
+    grepl("F23", CampaignName) ~ "Football",
+    grepl("F24", CampaignName) ~ "Football",
+    grepl("F25", CampaignName) ~ "Football",
+    grepl("B25", CampaignName) ~ "Baseball",
+    grepl("Men's Volleyball", CampaignName) ~"Men's Volleyball",
+    grepl("WSOC23", CampaignName) ~"Women's Soccer",
+    TRUE ~ "Unknown"
+    ))
+```
+
+
+
+```{r}
+gm_demographics_sports_groups <- gm_demographics_sports %>% 
+  filter(age != "Unknown") %>% 
+  filter(gender!= "unknown") %>% 
+  group_by(age, gender, Sport) %>% 
+  summarise(
+    total_reach = sum(Reach, na.rm = TRUE),
+    total_impressions = sum(Impressions, na.rm = TRUE),
+    total_link_clicks = sum(LinkClicks, na.rm = TRUE),
+    total_spend= sum(Spend, na.rm=TRUE)
+  ) %>% 
+  mutate(CTR = (total_link_clicks / total_impressions) * 100)
+```
+
+```{r}
+ggplot(gm_demographics_sports_groups, aes(x = age, y = total_impressions, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Impressions by Age and Gender", x = "Age Group", y = "Total Impressions") +
+  theme_minimal() +
+  facet_wrap(~ Sport) +
+  scale_fill_brewer(palette = "Set1")
+```
+
+```{r}
+ggplot(gm_demographics_sports_groups, aes(x = age, y = total_link_clicks, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Link Clicks by Age and Gender", x = "Age Group", y = "Link Clicks") +
+  theme_minimal() +
+  facet_wrap(~ Sport) +
+  scale_fill_brewer(palette = "Set1")
+```
+```{r}
+ggplot(gm_demographics_sports_groups, aes(x = age, y = total_reach, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Reach by Age and Gender", x = "Age Group", y = "Link Clicks") +
+  theme_minimal() +
+  facet_wrap(~ Sport) +
+  scale_fill_brewer(palette = "Set1")
+```
+```{r}
+ggplot(gm_demographics_sports_groups, aes(x = age, y = total_spend, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Spend by Age and Gender", x = "Age Group", y = "Link Clicks") +
+  theme_minimal() +
+  facet_wrap(~ Sport) +
+  scale_fill_brewer(palette = "Set1")
+```
+
+
+```{r}
+ggplot(gm_demographics_sports_groups, aes(x = age, y = CTR, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "CTR by Age and Gender", x = "Age Group", y = "Click Through Rate") +
+  theme_minimal() +
+  facet_wrap(~ Sport) +
+  scale_fill_brewer(palette = "Set1")
+```
+
