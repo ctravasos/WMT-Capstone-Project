@@ -376,3 +376,94 @@ model_1dview <- lm(viewroi28 ~ Impressions + Revenue_28d_view + Reach + Clicks +
 summary(model_28dview)
 ```
 
+
+
+Add in Adam's csv with revenue + spend -- to make interactive plots
+```{r}
+
+costs_expenses <- read.csv("C:/Users/localuser/OneDrive - nd.edu/Spring 2025/Sports Capstone/StanfordData.csv")
+head(costs_expenses)
+
+```
+
+```{r}
+library(plotly)
+
+# Load the dataset
+costs_expenses <- read.csv("C:/Users/localuser/OneDrive - nd.edu/Spring 2025/Sports Capstone/StanfordData.csv")
+
+# Plot using Plotly
+fig <- plot_ly(
+  costs_expenses, 
+  x = ~Revenue_28d_clickTotal, 
+  y = ~Spend, 
+  type = 'scatter', 
+  mode = 'markers',
+  marker = list(size = 10, Color = ~Spend), # Customize marker size and color if needed
+  text = ~paste("Revenue: ", Revenue_28d_clickTotal, 'Spend:', Spend, "Campaign Name: ", CampaignName),
+  color = ~Spend, size = ~Spend
+)
+
+# Show the plot
+fig
+
+```
+
+divide by sport based on campaign name
+```{r}
+library(dplyr)
+library(ggplot2)
+library(stringr)  # For str_detect()
+
+sports_data <- costs_expenses %>%
+  mutate(Sport = case_when(
+    str_detect(CampaignName, "MBB|Men's Basketball") ~ "Men's Basketball",
+    str_detect(CampaignName, "WBB|Women's Basketball") ~ "Women's Basketball",
+    str_detect(CampaignName, "FB|Football") ~ "Football",
+    str_detect(CampaignName, "SB|Softball") ~ "Softball",
+    str_detect(CampaignName, "BSB|Baseball") ~ "Baseball",
+    str_detect(CampaignName, "MS|Men's Soccer") ~ "Men's Soccer",
+    str_detect(CampaignName, "WS|Women's Soccer") ~ "Women's Soccer",
+    str_detect(CampaignName, "V24|Volleyball") ~ "Volleyball",
+    str_detect(CampaignName, "WG|Gymnastics") ~ "Gymnastics",
+    str_detect(CampaignName, "MWP|Water Polo") ~ "Water Polo",
+    str_detect(CampaignName, "Track|XC") ~ "Track & Field / XC",
+    TRUE ~ "Other"
+  ))
+
+```
+looking at by sport -- just football 
+
+```{r}
+library(dplyr)
+library(plotly)
+
+# Load the dataset
+costs_expenses <- read.csv("C:/Users/localuser/OneDrive - nd.edu/Spring 2025/Sports Capstone/StanfordData.csv")
+
+# Filter for Football campaigns
+football_data <- costs_expenses %>%
+  filter(str_detect(CampaignName, "FB|Football"))
+
+# Plot using Plotly
+fig <- plot_ly(
+  football_data, 
+  x = ~Revenue_28d_clickTotal, 
+  y = ~Spend, 
+  type = 'scatter', 
+  mode = 'markers',
+  marker = list(size = 10),  # Customize marker size
+  text = ~paste("Revenue: ", Revenue_28d_clickTotal, 
+                "<br>Spend: ", Spend, 
+                "<br>Campaign Name: ", CampaignName),
+  color = ~Spend, 
+  size = ~Spend
+)
+
+# Show the plot
+fig
+```
+
+
+
+
