@@ -1,0 +1,77 @@
+---
+title: "Playfly"
+author: "Stefan Lechmanik"
+date: "2025-03-18"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+playfly<- read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/Playfly Meta Ads Insights by Demographics - 2022 - 2025 (1).csv")
+```
+
+
+
+```{r}
+playfly <- playfly %>%
+  mutate(Partner = case_when(
+    grepl('^Penn State|^PSU|^PSECU|#PennState', CampaignName) |
+    grepl('Penn State', CampaignName) |
+    grepl('^PSU|Penn State', AdName) |
+    CampaignId %in% c('120211546929590146','120210616301380146','120209669421030146','120210811066100146') ~ 'Penn State',
+
+    grepl('^DU|^DSP|DU|Denver', CampaignName) ~ 'Denver',
+
+    grepl('^FAU', CampaignName) ~ 'FAU',
+
+    grepl('^Husker|^NEB|Husker|Nebraska', CampaignName) |
+    CampaignId %in% c('120208661203050146','23861889683610145') ~ 'Nebraska',
+
+    grepl('^VT|Virginia Tech', CampaignName) ~ 'Virginia Tech',
+
+    grepl('^MSU', CampaignName) ~ 'Michigan State',
+
+    grepl('^UTSA', CampaignName) |
+    CampaignId %in% c('120210838270170146','120210615740670146') ~ 'UTSA',
+
+    grepl('^UNM|New Mexico', CampaignName) |
+    grepl('Lobo|UNM', AdName) |
+    CampaignId %in% c('120208529134920146','120208363834590146','120202412274520146','23852005468560145') ~ 'New Mexico',
+
+    grepl('^Richmond', CampaignName) |
+    grepl('Spider Brew', AdName) ~ 'Richmond',
+
+    grepl('Virginia|^UVA', CampaignName) |
+    CampaignId %in% c('120212716591730146','120212718169680146','120212979890140146','120212979911530146') ~ 'Virginia',
+
+    grepl('Maryland', CampaignName) |
+    CampaignId %in% c('23860400184800145','23860400190560145') ~ 'Maryland',
+
+    CampaignId == '120210135826690146' ~ 'USC',
+
+    CampaignId %in% c('120205391963560146','120210111496960146','23850065928570145','23850260675660145','23852949056740145') ~ 'Gaming So Cal',
+
+    grepl('UHSAA', CampaignName) ~ 'UHSAA',
+
+    grepl('GMU|George Mason', CampaignName) ~ 'George Mason',
+
+    grepl('UCF', CampaignName) ~ 'UCF',
+
+    TRUE ~ 'Unknown Partner'
+  ))
+```
+
+
+
+```{r}
+unknown <- playfly %>% 
+  filter(Partner == "Unknown Partner")
+```
+
