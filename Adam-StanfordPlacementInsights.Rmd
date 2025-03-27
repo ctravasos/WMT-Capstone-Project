@@ -464,6 +464,258 @@ fig <- plot_ly(
 fig
 ```
 
+```{r}
+library(dplyr)
+library(plotly)
+library(stringr)
+
+# Load the dataset
+costs_expenses <- read.csv("C:/Users/localuser/OneDrive - nd.edu/Spring 2025/Sports Capstone/StanfordData.csv")
+
+# Clean and process data
+costs_expenses <- costs_expenses %>%
+  filter(!is.na(LCTR), !is.na(clickroi28), !is.na(Spend), !is.na(Impressions)) %>%
+  filter(LCTR != 1 & LCTR > 0.01) %>%  # <-- Filter out near-zero LCTR
+  mutate(Impressions_new = Impressions / LCTR)
+
+# Filter for Football campaigns
+football_data <- costs_expenses %>%
+  filter(str_detect(CampaignName, "FB|Football"))
+
+# Summarize: average by CampaignName
+all_sports <- costs_expenses %>%
+  group_by(CampaignName) %>%
+  summarise(
+    avg_impressions = mean(Impressions_new, na.rm = TRUE),
+    avg_spend = mean(Spend, na.rm = TRUE),
+    avg_revenue = mean(Revenue_28d_clickTotal, na.rm = TRUE)
+  )
+
+
+# Plot averages instead of raw data
+fig <- plot_ly(
+  all_sports,
+  x = ~avg_spend,
+  y = ~avg_impressions,
+  type = 'scatter',
+  mode = 'markers',
+  text = ~paste("Avg Revenue: ", round(avg_revenue, 2),
+                "<br>Avg Spend: ", round(avg_spend, 2),
+                "<br>Campaign Name: ", CampaignName),
+  marker = list(
+    size = ~avg_spend / max(avg_spend) * 20,  # scaled marker size
+    color = ~avg_spend,
+    colorscale = 'Viridis',
+    showscale = TRUE
+  )
+)
+
+fig
+
+```
+
+```{r}
+library(dplyr)
+library(plotly)
+library(stringr)
+
+# Load the dataset
+costs_expenses <- read.csv("C:/Users/localuser/OneDrive - nd.edu/Spring 2025/Sports Capstone/StanfordData.csv")
+
+# Clean and process data
+costs_expenses <- costs_expenses %>%
+  filter(!is.na(LCTR), !is.na(clickroi28), !is.na(Spend), !is.na(Impressions)) %>%
+  filter(LCTR != 1 & LCTR > 0.01) %>%
+  mutate(Impressions_new = Impressions / LCTR)
+
+# Assign sports based on CampaignName
+costs_expenses <- costs_expenses %>%
+  mutate(Sport = case_when(
+    str_detect(CampaignName, "MBB|Men's Basketball") ~ "Men's Basketball",
+    str_detect(CampaignName, "WBB|Women's Basketball") ~ "Women's Basketball",
+    str_detect(CampaignName, "FB|Football") ~ "Football",
+    str_detect(CampaignName, "SB|Softball") ~ "Softball",
+    str_detect(CampaignName, "BSB|Baseball") ~ "Baseball",
+    str_detect(CampaignName, "MS|Men's Soccer") ~ "Men's Soccer",
+    str_detect(CampaignName, "WS|Women's Soccer") ~ "Women's Soccer",
+    str_detect(CampaignName, "V24|Volleyball") ~ "Volleyball",
+    str_detect(CampaignName, "WG|Gymnastics") ~ "Gymnastics",
+    str_detect(CampaignName, "MWP|Water Polo") ~ "Water Polo",
+    str_detect(CampaignName, "Track|XC") ~ "Track & Field / XC",
+    TRUE ~ "Other"
+  ))
+
+# Summarize: average by CampaignName and Sport
+sport_summary <- costs_expenses %>%
+  group_by(CampaignName, Sport) %>%
+  summarise(
+    avg_impressions = mean(Impressions_new, na.rm = TRUE),
+    avg_spend = mean(Spend, na.rm = TRUE),
+    avg_revenue = mean(Revenue_28d_clickTotal, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Plot: color by Sport
+fig <- plot_ly(
+  sport_summary,
+  x = ~avg_spend,
+  y = ~avg_impressions,
+  type = 'scatter',
+  mode = 'markers',
+  color = ~Sport,  # Coloring by Sport now
+  text = ~paste("Sport: ", Sport,
+                "<br>Avg Revenue: ", round(avg_revenue, 2),
+                "<br>Avg Spend: ", round(avg_spend, 2),
+                "<br>Campaign: ", CampaignName, 
+                "<br>Sport:", Sport),
+        
+  marker = list(
+    size = ~avg_spend / max(avg_spend, na.rm = TRUE) * 20
+  )
+)
+
+fig
+
+
+```
+
+split into male + female 
+
+```{r}
+
+library(dplyr)
+library(plotly)
+library(stringr)
+
+# Load the dataset
+costs_expenses <- read.csv("C:/Users/localuser/OneDrive - nd.edu/Spring 2025/Sports Capstone/StanfordData.csv")
+
+# Clean and process data
+costs_expenses <- costs_expenses %>%
+  filter(!is.na(LCTR), !is.na(clickroi28), !is.na(Spend), !is.na(Impressions)) %>%
+  filter(LCTR != 1 & LCTR > 0.01) %>%
+  mutate(Impressions_new = Impressions / LCTR)
+
+# Assign sports based on CampaignName
+costs_expenses <- costs_expenses %>%
+  mutate(Sport = case_when(
+    str_detect(CampaignName, "MBB|Men's Basketball") ~ "Men's Basketball",
+    str_detect(CampaignName, "WBB|Women's Basketball") ~ "Women's Basketball",
+    str_detect(CampaignName, "FB|Football") ~ "Football",
+    str_detect(CampaignName, "SB|Softball") ~ "Softball",
+    str_detect(CampaignName, "BSB|Baseball") ~ "Baseball",
+    str_detect(CampaignName, "MS|Men's Soccer") ~ "Men's Soccer",
+    str_detect(CampaignName, "WS|Women's Soccer") ~ "Women's Soccer",
+    str_detect(CampaignName, "V24|Volleyball") ~ "Volleyball",
+    str_detect(CampaignName, "WG|Gymnastics") ~ "Gymnastics",
+    str_detect(CampaignName, "MWP|Water Polo") ~ "Water Polo",
+    str_detect(CampaignName, "Track|XC") ~ "Track & Field / XC",
+    TRUE ~ "Other"
+  ))
+
+# Summarize: average by CampaignName and Sport
+sport_summary <- costs_expenses %>%
+  filter(Sport == "Men's Basketball" | Sport == "Women's Basketball") %>%
+  group_by(CampaignName, Sport) %>%
+  summarise(
+    avg_impressions = mean(Impressions_new, na.rm = TRUE),
+    avg_spend = mean(Spend, na.rm = TRUE),
+    avg_revenue = mean(Revenue_28d_clickTotal, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Plot: color by Sport
+fig <- plot_ly(
+  sport_summary,
+  x = ~avg_spend,
+  y = ~avg_impressions,
+  type = 'scatter',
+  mode = 'markers',
+  color = ~Sport,  # Coloring by Sport now
+  text = ~paste("Sport: ", Sport,
+                "<br>Avg Revenue: ", round(avg_revenue, 2),
+                "<br>Avg Spend: ", round(avg_spend, 2),
+                "<br>Campaign: ", CampaignName, 
+                "<br>Sport:", Sport),
+        
+  marker = list(
+    size = ~avg_spend / max(avg_spend, na.rm = TRUE) * 20
+  )
+)
+
+fig
+
+
+```
+
+
+just other 
+```{r}
+
+# Load the dataset
+costs_expenses <- read.csv("C:/Users/localuser/OneDrive - nd.edu/Spring 2025/Sports Capstone/StanfordData.csv")
+
+# Clean and process data
+costs_expenses <- costs_expenses %>%
+  filter(!is.na(LCTR), !is.na(clickroi28), !is.na(Spend), !is.na(Impressions)) %>%
+  filter(LCTR != 1 & LCTR > 0.01) %>%
+  mutate(Impressions_new = Impressions / LCTR)
+
+# Assign sports based on CampaignName
+costs_expenses <- costs_expenses %>%
+  mutate(Sport = case_when(
+    str_detect(CampaignName, "MBB|Men's Basketball") ~ "Men's Basketball",
+    str_detect(CampaignName, "WBB|Women's Basketball") ~ "Women's Basketball",
+    str_detect(CampaignName, "FB|Football") ~ "Football",
+    str_detect(CampaignName, "SB|Softball") ~ "Softball",
+    str_detect(CampaignName, "BSB|Baseball") ~ "Baseball",
+    str_detect(CampaignName, "MS|Men's Soccer") ~ "Men's Soccer",
+    str_detect(CampaignName, "WS|Women's Soccer") ~ "Women's Soccer",
+    str_detect(CampaignName, "V24|Volleyball") ~ "Volleyball",
+    str_detect(CampaignName, "WG|Gymnastics") ~ "Gymnastics",
+    str_detect(CampaignName, "MWP|Water Polo") ~ "Water Polo",
+    str_detect(CampaignName, "Track|XC") ~ "Track & Field / XC",
+    TRUE ~ "Other"
+  ))
+
+# Summarize: average by CampaignName and Sport
+sport_summary <- costs_expenses %>%
+  filter(Sport == "Other") %>%
+  group_by(CampaignName, Sport) %>%
+  summarise(
+    avg_impressions = mean(Impressions_new, na.rm = TRUE),
+    avg_spend = mean(Spend, na.rm = TRUE),
+    avg_revenue = mean(Revenue_28d_clickTotal, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Plot: color by Sport
+fig <- plot_ly(
+  sport_summary,
+  x = ~avg_spend,
+  y = ~avg_impressions,
+  type = 'scatter',
+  mode = 'markers',
+  color = ~Sport,  # Coloring by Sport now
+  text = ~paste("Sport: ", Sport,
+                "<br>Avg Revenue: ", round(avg_revenue, 2),
+                "<br>Avg Spend: ", round(avg_spend, 2),
+                "<br>Campaign: ", CampaignName, 
+                "<br>Sport:", Sport),
+        
+  marker = list(
+    size = ~avg_spend / max(avg_spend, na.rm = TRUE) * 20
+  )
+)
+
+fig
+
+
+```
+
+
+
+
 
 
 
