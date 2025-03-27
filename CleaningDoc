@@ -1,0 +1,75 @@
+---
+title: "MiamiDocs"
+author: "Adam El-Kadi"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(car)
+
+#Adams Path
+PlacementInsights <- read.csv('~/Desktop/Capstone/"school" Data/PlacementInsights.csv')
+Demographics <- read.csv('~/Desktop/Capstone/"school" Data/Demographics.csv')
+Insights <- read.csv('~/Desktop/Capstone/"school" Data/Insights.csv')
+```
+
+```{r}
+PlacementInsights$LCTR <- PlacementInsights$Link.Clicks/PlacementInsights$Impressions
+PlacementInsights$LCTR[is.infinite(PlacementInsights$LCTR)] <- 0
+```
+
+# Big Goal: Build a model on ROI, maybe monetize clicks 
+
+```{r}
+#Check campaign id format
+PlacementInsightsSummary <- PlacementInsights %>% 
+  group_by(CampaignId, AdId) %>% 
+  summarise(ImpressionsTotal = sum(Impressions, na.rm = T), 
+            ReachTotal = sum(Reach, na.rm = T),
+            ClicksTotal = sum(Clicks, na.rm = T),
+            Link.ClicksTotal = sum(Link.Clicks, na.rm = T))
+
+# Insights Money Building
+InsightsSummary <- Insights %>% 
+  group_by(CampaignId, AdId) %>% 
+  summarise(Revenue_28d_clickTotal = sum(Revenue_28d_click, na.rm = T), 
+            Revenue_28d_viewTotal = sum(Revenue_28d_view, na.rm = T),
+            Revenue_7d_clickTotal = sum(Revenue_7d_click, na.rm = T),
+            Revenue_7d_viewTotal = sum(Revenue_7d_view, na.rm = T),
+            Revenue_1d_clickTotal = sum(Revenue_1d_click, na.rm = T), 
+            Revenue_1d_viewTotal = sum(Revenue_1d_view, na.rm = T))
+
+
+DemographicsSummary <- Demographics %>% 
+  group_by(AdId) %>% 
+ summarise(Spend = sum(Spend, na.rm = T))
+
+
+```
+
+```{r}
+#Change tmp3 
+tmp <- full_join(InsightsSummary, PlacementInsightsSummary, by = c("CampaignId", "AdId"))
+tmp2 <- full_join(tmp, DemographicsSummary, by = c("AdId"))
+tmp3 <- tmp2[1:458,]
+
+tmp3$viewroi28 <- (tmp3$Revenue_28d_viewTotal - tmp3$Spend) / tmp3$Spend
+tmp3$viewroi7 <- (tmp3$Revenue_7d_viewTotal - tmp3$Spend) / tmp3$Spend
+tmp3$viewroi1 <- (tmp3$Revenue_1d_viewTotal - tmp3$Spend) / tmp3$Spend
+tmp3$clickroi28 <- (tmp3$Revenue_28d_clickTotal - tmp3$Spend) / tmp3$Spend
+tmp3$clickroi7 <- (tmp3$Revenue_7d_clickTotal - tmp3$Spend) / tmp3$Spend
+tmp3$clickroi1 <- (tmp3$Revenue_1d_clickTotal - tmp3$Spend) / tmp3$Spend
+
+all_placement_insights <- full_join(PlacementInsights, tmp3, by = c("CampaignId", "AdId"))
+```
+
+```{r}
+write_csv(all_placement_insights, "~/Desktop/Capstone/school Data/schoolData.csv")
+```
