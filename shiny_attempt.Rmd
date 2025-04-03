@@ -653,6 +653,208 @@ server <- function(input, output, session) {
 
 ```
 
+Fixed graphs 
+```{r}
+library(shiny)
+library(tidyverse)
+library(DT)
+library(plotly)
+
+# Load and preprocess the data
+all_placement_insights <- read_csv(file.path(Sys.getenv("USERPROFILE"), "Downloads", "schoolData.csv"))
+
+# Add Sport classification
+all_placement_insights <- all_placement_insights %>%
+  mutate(Sport = case_when(
+    str_detect(CampaignName, "MBB|Men's Basketball") ~ "Men's Basketball",
+    str_detect(CampaignName, "WBB|Women's Basketball") ~ "Women's Basketball",
+    str_detect(CampaignName, "FB|Football") ~ "Football",
+    str_detect(CampaignName, "SB|Softball") ~ "Softball",
+    str_detect(CampaignName, "BSB|Baseball") ~ "Baseball",
+    str_detect(CampaignName, "MS|Men's Soccer") ~ "Men's Soccer",
+    str_detect(CampaignName, "WS|Women's Soccer") ~ "Women's Soccer",
+    str_detect(CampaignName, "V24|Volleyball") ~ "Volleyball",
+    str_detect(CampaignName, "WG|Gymnastics") ~ "Gymnastics",
+    str_detect(CampaignName, "MWP|Water Polo") ~ "Water Polo",
+    str_detect(CampaignName, "Track|XC") ~ "Track & Field / XC",
+    TRUE ~ "Other"
+  ))
+
+# UI
+ui <- fluidPage(
+  titlePanel("School Placement Insights Explorer"),
+
+  tabsetPanel(
+    tabPanel("Overview",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("sport", "Select Sport:",
+                      choices = sort(unique(all_placement_insights$Sport)),
+                      selected = unique(all_placement_insights$Sport)[1]),
+          selectInput("campaign_name", "Select Campaign Name:", choices = NULL)
+        ),
+        mainPanel(
+          h4("Instructions"),
+          p("Use the dropdowns to filter the data by sport and campaign name."),
+          p("Then switch to the Data Table or ROI Visualization tabs to explore the results.")
+        )
+      )
+    ),
+
+    tabPanel("Data Table", 
+      DTOutput("data_table")
+    ),
+
+    tabPanel("ROI Visualization",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("sport_roi", "Select Sport:",
+                      choices = sort(unique(all_placement_insights$Sport)),
+                      selected = unique(all_placement_insights$Sport)[1]),
+          selectInput("campaign_name_roi", "Select Campaign Name:", choices = NULL)
+        ),
+        mainPanel(
+          h4("Average ROI by Type"),
+          plotOutput("roi_plot_avg"),
+          br(),
+          h4("ROI Distribution by Type"),
+          plotOutput("roi_plot_box"),
+          br(),
+          h4("Spend vs Impressions by Campaign"),
+          plotlyOutput("roi_bubble_plot")
+        )
+      )
+    )
+  )
+)
+
+# Server
+server <- function(input, output, session) {
+
+  # Update CampaignName dropdown for Overview tab
+  observeEvent(input$sport, {
+    names <- all_placement_insights %>%
+      filter(Sport == input$sport) %>%
+      pull(CampaignName) %>%
+      unique() %>%
+      sort()
+    updateSelectInput(session, "campaign_name", choices = c("All", names), selected = "All")
+  })
+
+  # Update CampaignName dropdown for ROI tab
+  observeEvent(input$sport_roi, {
+    names <- all_placement_insights %>%
+      filter(Sport == input$sport_roi) %>%
+      pull(CampaignName) %>%
+      unique() %>%
+      sort()
+    updateSelectInput(session, "campaign_name_roi", choices = c("All", names), selected = "All")
+  })
+
+  # Reactive for filtered data (Overview tab)
+  filtered_data <- reactive({
+    df <- all_placement_insights %>%
+      filter(Sport == input$sport)
+    if (input$campaign_name != "All") {
+      df <- df %>% filter(CampaignName == input$campaign_name)
+    }
+    df
+  })
+
+  # Reactive for ROI tab
+  filtered_data_roi <- reactive({
+    df <- all_placement_insights %>%
+      filter(Sport == input$sport_roi)
+    if (input$campaign_name_roi != "All") {
+      df <- df %>% filter(CampaignName == input$campaign_name_roi)
+    }
+    df
+  })
+
+  # Output: Data Table
+  output$data_table <- renderDT({
+    datatable(filtered_data(), options = list(pageLength = 10))
+  })
+
+  # Output: Bar Plot (Average ROI)
+  output$roi_plot_avg <- renderPlot({
+    df <- filtered_data_roi()
+    if (nrow(df) > 0) {
+      roi_df <- df %>%
+        select(viewroi28, viewroi7, viewroi1,
+               clickroi28, clickroi7, clickroi1) %>%
+        pivot_longer(cols = everything(), names_to = "ROI_Type", values_to = "Value") %>%
+        group_by(ROI_Type) %>%
+        summarise(Value = mean(Value, na.rm = TRUE))
+
+      ggplot(roi_df, aes(x = ROI_Type, y = Value, fill = ROI_Type)) +
+        geom_bar(stat = "identity") +
+        theme_minimal() +
+        labs(title = "Average ROI by Type", y = "ROI", x = "ROI Type") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
+  })
+
+  # Output: Boxplot of ROI
+  output$roi_plot_box <- renderPlot({
+    df <- filtered_data_roi()
+    if (nrow(df) > 0) {
+      roi_df <- df %>%
+        select(viewroi28, viewroi7, viewroi1,
+               clickroi28, clickroi7, clickroi1) %>%
+        pivot_longer(cols = everything(), names_to = "ROI_Type", values_to = "Value")
+
+      ggplot(roi_df, aes(x = ROI_Type, y = Value, fill = ROI_Type)) +
+        geom_boxplot() +
+        theme_minimal() +
+        labs(title = "ROI Distribution by Type", y = "ROI", x = "ROI Type") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
+  })
+
+  # Output: Bubble plot of Spend vs Impressions
+  output$roi_bubble_plot <- renderPlotly({
+    df <- filtered_data_roi()
+    if (nrow(df) > 0 && "Spend" %in% names(df) && "Impressions" %in% names(df)) {
+      plot_ly(
+        data = df,
+        x = ~Spend,
+        y = ~Impressions,
+        type = 'scatter',
+        mode = 'markers',
+        size = ~Impressions,
+        color = ~CampaignName,
+        text = ~paste("Campaign:", CampaignName,
+                      "<br>Spend:", Spend,
+                      "<br>Impressions:", Impressions)
+      ) %>%
+      layout(title = "Spend vs Impressions by Campaign",
+             xaxis = list(title = "Spend"),
+             yaxis = list(title = "Impressions"))
+    }
+  })
+}
+
+# Run the app
+shinyApp(ui, server)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
