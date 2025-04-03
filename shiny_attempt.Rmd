@@ -1,0 +1,1224 @@
+---
+title: "SHINY"
+output: html_document
+date: "2025-03-27"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+library(shiny)
+library(tidyverse)
+library(DT)
+
+# Load data (or define a reactive CSV path here)
+all_placement_insights <- read_csv(file.path(Sys.getenv("USERPROFILE"), "Downloads", "schoolData.csv"))
+
+ui <- fluidPage(
+  titlePanel("School Placement Insights Explorer"),
+
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("campaign", "Select Campaign ID:",
+                  choices = unique(all_placement_insights$CampaignId),
+                  selected = unique(all_placement_insights$CampaignId)[1]),
+      selectInput("ad", "Select Ad ID:",
+                  choices = unique(all_placement_insights$AdId),
+                  selected = unique(all_placement_insights$AdId)[1])
+    ),
+
+    mainPanel(
+      tabsetPanel(
+        tabPanel("Data Table", DTOutput("data_table")),
+        tabPanel("ROI Plot", plotOutput("roi_plot"))
+      )
+    )
+  )
+)
+
+server <- function(input, output, session) {
+
+  filtered_data <- reactive({
+    all_placement_insights %>%
+      filter(CampaignId == input$campaign, AdId == input$ad)
+  })
+
+  output$data_table <- renderDT({
+    datatable(filtered_data(), options = list(pageLength = 10))
+  })
+
+  output$roi_plot <- renderPlot({
+    df <- filtered_data()
+
+    if (nrow(df) > 0) {
+      roi_df <- df %>%
+        select(viewroi28, viewroi7, viewroi1,
+               clickroi28, clickroi7, clickroi1) %>%
+        pivot_longer(cols = everything(), names_to = "ROI_Type", values_to = "Value")
+
+      ggplot(roi_df, aes(x = ROI_Type, y = Value, fill = ROI_Type)) +
+        geom_bar(stat = "identity") +
+        theme_minimal() +
+        labs(title = "ROI by Type", y = "ROI", x = "ROI Type") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
+  })
+}
+
+shinyApp(ui, server)
+
+```
+
+
+Includes - campaignId, adsetID, and sport -- produces ROI graphs
+```{r}
+library(shiny)
+library(tidyverse)
+library(DT)
+
+# Load and preprocess the data
+all_placement_insights <- read_csv(file.path(Sys.getenv("USERPROFILE"), "Downloads", "schoolData.csv"))
+
+# Add Sport classification
+all_placement_insights <- all_placement_insights %>%
+  mutate(Sport = case_when(
+    str_detect(CampaignName, "MBB|Men's Basketball") ~ "Men's Basketball",
+    str_detect(CampaignName, "WBB|Women's Basketball") ~ "Women's Basketball",
+    str_detect(CampaignName, "FB|Football") ~ "Football",
+    str_detect(CampaignName, "SB|Softball") ~ "Softball",
+    str_detect(CampaignName, "BSB|Baseball") ~ "Baseball",
+    str_detect(CampaignName, "MS|Men's Soccer") ~ "Men's Soccer",
+    str_detect(CampaignName, "WS|Women's Soccer") ~ "Women's Soccer",
+    str_detect(CampaignName, "V24|Volleyball") ~ "Volleyball",
+    str_detect(CampaignName, "WG|Gymnastics") ~ "Gymnastics",
+    str_detect(CampaignName, "MWP|Water Polo") ~ "Water Polo",
+    str_detect(CampaignName, "Track|XC") ~ "Track & Field / XC",
+    TRUE ~ "Other"
+  ))
+
+# UI
+ui <- fluidPage(
+  titlePanel("School Placement Insights Explorer"),
+
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("sport", "Select Sport:",
+                  choices = sort(unique(all_placement_insights$Sport)),
+                  selected = unique(all_placement_insights$Sport)[1]),
+
+      selectInput("campaign", "Select Campaign ID:", choices = NULL),
+      selectInput("ad", "Select Ad ID:", choices = NULL)
+    ),
+
+    mainPanel(
+      tabsetPanel(
+        tabPanel("Data Table", DTOutput("data_table")),
+        tabPanel("ROI Plot", plotOutput("roi_plot"))
+      )
+    )
+  )
+)
+
+# Server
+server <- function(input, output, session) {
+
+  # Update campaign choices when sport changes
+  observeEvent(input$sport, {
+    campaigns <- all_placement_insights %>%
+      filter(Sport == input$sport) %>%
+      pull(CampaignId) %>%
+      unique()
+
+    updateSelectInput(session, "campaign", choices = campaigns, selected = campaigns[1])
+  })
+
+  # Update ad choices when campaign changes
+  observeEvent(input$campaign, {
+    ads <- all_placement_insights %>%
+      filter(Sport == input$sport, CampaignId == input$campaign) %>%
+      pull(AdId) %>%
+      unique()
+
+    updateSelectInput(session, "ad", choices = ads, selected = ads[1])
+  })
+
+  # Filter data reactively
+  filtered_data <- reactive({
+    all_placement_insights %>%
+      filter(Sport == input$sport,
+             CampaignId == input$campaign,
+             AdId == input$ad)
+  })
+
+  # Output: Data Table
+  output$data_table <- renderDT({
+    datatable(filtered_data(), options = list(pageLength = 10))
+  })
+
+  # Output: ROI Plot
+  output$roi_plot <- renderPlot({
+    df <- filtered_data()
+
+    if (nrow(df) > 0) {
+      roi_df <- df %>%
+        select(viewroi28, viewroi7, viewroi1,
+               clickroi28, clickroi7, clickroi1) %>%
+        pivot_longer(cols = everything(), names_to = "ROI_Type", values_to = "Value")
+
+      ggplot(roi_df, aes(x = ROI_Type, y = Value, fill = ROI_Type)) +
+        geom_bar(stat = "identity") +
+        theme_minimal() +
+        labs(title = "ROI by Type", y = "ROI", x = "ROI Type") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
+  })
+}
+
+# Launch the app
+shinyApp(ui, server)
+
+```
+
+remove: adset + campaign ID -- only sport and campaign name
+
+```{r}
+library(shiny)
+library(tidyverse)
+library(DT)
+
+# Load and preprocess the data
+all_placement_insights <- read_csv(file.path(Sys.getenv("USERPROFILE"), "Downloads", "schoolData.csv"))
+
+# Add Sport classification
+all_placement_insights <- all_placement_insights %>%
+  mutate(Sport = case_when(
+    str_detect(CampaignName, "MBB|Men's Basketball") ~ "Men's Basketball",
+    str_detect(CampaignName, "WBB|Women's Basketball") ~ "Women's Basketball",
+    str_detect(CampaignName, "FB|Football") ~ "Football",
+    str_detect(CampaignName, "SB|Softball") ~ "Softball",
+    str_detect(CampaignName, "BSB|Baseball") ~ "Baseball",
+    str_detect(CampaignName, "MS|Men's Soccer") ~ "Men's Soccer",
+    str_detect(CampaignName, "WS|Women's Soccer") ~ "Women's Soccer",
+    str_detect(CampaignName, "V24|Volleyball") ~ "Volleyball",
+    str_detect(CampaignName, "WG|Gymnastics") ~ "Gymnastics",
+    str_detect(CampaignName, "MWP|Water Polo") ~ "Water Polo",
+    str_detect(CampaignName, "Track|XC") ~ "Track & Field / XC",
+    TRUE ~ "Other"
+  ))
+
+# UI
+ui <- fluidPage(
+  titlePanel("School Placement Insights Explorer"),
+
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("sport", "Select Sport:",
+                  choices = sort(unique(all_placement_insights$Sport)),
+                  selected = unique(all_placement_insights$Sport)[1]),
+
+      selectInput("campaign_name", "Select Campaign Name:", choices = NULL)
+    ),
+
+    mainPanel(
+      tabsetPanel(
+        tabPanel("Data Table", DTOutput("data_table")),
+        tabPanel("ROI Plot", plotOutput("roi_plot"))
+      )
+    )
+  )
+)
+
+# Server
+server <- function(input, output, session) {
+
+  # Update campaign name choices when sport changes
+  observeEvent(input$sport, {
+    names <- all_placement_insights %>%
+      filter(Sport == input$sport) %>%
+      pull(CampaignName) %>%
+      unique() %>%
+      sort()
+
+    updateSelectInput(session, "campaign_name", choices = names, selected = names[1])
+  })
+
+  # Filter data based on sport and campaign name
+  filtered_data <- reactive({
+    all_placement_insights %>%
+      filter(Sport == input$sport, CampaignName == input$campaign_name)
+  })
+
+  # Output: Data Table
+  output$data_table <- renderDT({
+    datatable(filtered_data(), options = list(pageLength = 10))
+  })
+
+  # Output: ROI Plot
+  output$roi_plot <- renderPlot({
+    df <- filtered_data()
+
+    if (nrow(df) > 0) {
+      roi_df <- df %>%
+        select(viewroi28, viewroi7, viewroi1,
+               clickroi28, clickroi7, clickroi1) %>%
+        pivot_longer(cols = everything(), names_to = "ROI_Type", values_to = "Value")
+
+      ggplot(roi_df, aes(x = ROI_Type, y = Value, fill = ROI_Type)) +
+        geom_bar(stat = "identity") +
+        theme_minimal() +
+        labs(title = "ROI by Type", y = "ROI", x = "ROI Type") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
+  })
+}
+
+# Launch the app
+shinyApp(ui, server)
+
+```
+
+add in an all button 
+
+
+puts all graphs on one tab
+```{r}
+library(shiny)
+library(tidyverse)
+library(DT)
+
+# Load and preprocess the data
+all_placement_insights <- read_csv(file.path(Sys.getenv("USERPROFILE"), "Downloads", "schoolData.csv"))
+
+# Add Sport classification
+all_placement_insights <- all_placement_insights %>%
+  mutate(Sport = case_when(
+    str_detect(CampaignName, "MBB|Men's Basketball") ~ "Men's Basketball",
+    str_detect(CampaignName, "WBB|Women's Basketball") ~ "Women's Basketball",
+    str_detect(CampaignName, "FB|Football") ~ "Football",
+    str_detect(CampaignName, "SB|Softball") ~ "Softball",
+    str_detect(CampaignName, "BSB|Baseball") ~ "Baseball",
+    str_detect(CampaignName, "MS|Men's Soccer") ~ "Men's Soccer",
+    str_detect(CampaignName, "WS|Women's Soccer") ~ "Women's Soccer",
+    str_detect(CampaignName, "V24|Volleyball") ~ "Volleyball",
+    str_detect(CampaignName, "WG|Gymnastics") ~ "Gymnastics",
+    str_detect(CampaignName, "MWP|Water Polo") ~ "Water Polo",
+    str_detect(CampaignName, "Track|XC") ~ "Track & Field / XC",
+    TRUE ~ "Other"
+  ))
+
+# UI
+ui <- fluidPage(
+  titlePanel("School Placement Insights Explorer"),
+
+  tabsetPanel(
+    
+    # Tab 1: Overview with filters and instructions
+    tabPanel("Overview",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("sport", "Select Sport:",
+                      choices = sort(unique(all_placement_insights$Sport)),
+                      selected = unique(all_placement_insights$Sport)[1]),
+          selectInput("campaign_name", "Select Campaign Name:", choices = NULL)
+        ),
+        mainPanel(
+          h4("Instructions"),
+          p("Use the dropdowns to filter the data by sport and campaign name."),
+          p("Then switch to the Data Table or ROI Visualization tabs to explore the results.")
+        )
+      )
+    ),
+
+    # Tab 2: Data Table only
+    tabPanel("Data Table", 
+      DTOutput("data_table")
+    ),
+
+    # Tab 3: ROI Visualization with filters
+   tabPanel("ROI Visualization",
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("sport_roi", "Select Sport:",
+                  choices = sort(unique(all_placement_insights$Sport)),
+                  selected = unique(all_placement_insights$Sport)[1]),
+      selectInput("campaign_name_roi", "Select Campaign Name:", choices = NULL)
+    ),
+    mainPanel(
+      h4("Average ROI by Type"),
+      plotOutput("roi_plot_avg"),
+      br(),
+      h4("ROI Distribution by Type"),
+      plotOutput("roi_plot_box"),
+      br(),
+      h4("Spend vs Impressions by Campaign"),
+      plotlyOutput("roi_bubble_plot")
+    )
+  )
+)
+
+  )
+)
+
+# Server
+server <- function(input, output, session) {
+
+  ### Filter controls for both Overview and ROI tabs
+
+  # Campaign dropdown in Overview tab
+  observeEvent(input$sport, {
+    names <- all_placement_insights %>%
+      filter(Sport == input$sport) %>%
+      pull(CampaignName) %>%
+      unique() %>%
+      sort()
+    updateSelectInput(session, "campaign_name", choices = c("All", names), selected = "All")
+  })
+
+  # Campaign dropdown in ROI tab
+  observeEvent(input$sport_roi, {
+    names <- all_placement_insights %>%
+      filter(Sport == input$sport_roi) %>%
+      pull(CampaignName) %>%
+      unique() %>%
+      sort()
+    updateSelectInput(session, "campaign_name_roi", choices = c("All", names), selected = "All")
+  })
+
+  # Shared reactive data for Data Table (based on Overview filters)
+  filtered_data <- reactive({
+    df <- all_placement_insights %>%
+      filter(Sport == input$sport)
+    if (input$campaign_name != "All") {
+      df <- df %>% filter(CampaignName == input$campaign_name)
+    }
+    df
+  })
+
+  # Shared reactive data for ROI tab
+  filtered_data_roi <- reactive({
+    df <- all_placement_insights %>%
+      filter(Sport == input$sport_roi)
+    if (input$campaign_name_roi != "All") {
+      df <- df %>% filter(CampaignName == input$campaign_name_roi)
+    }
+    df
+  })
+
+  # Output: Data Table
+  output$data_table <- renderDT({
+    datatable(filtered_data(), options = list(pageLength = 10))
+  })
+
+  # Output: ROI Plot
+  output$roi_plot <- renderPlot({
+    df <- filtered_data_roi()
+
+    if (nrow(df) > 0) {
+      roi_df <- df %>%
+        select(viewroi28, viewroi7, viewroi1,
+               clickroi28, clickroi7, clickroi1) %>%
+        pivot_longer(cols = everything(), names_to = "ROI_Type", values_to = "Value") %>%
+        group_by(ROI_Type) %>%
+        summarise(Value = mean(Value, na.rm = TRUE))
+
+      ggplot(roi_df, aes(x = ROI_Type, y = Value, fill = ROI_Type)) +
+        geom_bar(stat = "identity") +
+        theme_minimal() +
+        labs(title = "Average ROI by Type", y = "ROI", x = "ROI Type") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
+  })
+}
+
+# Run the app
+shinyApp(ui, server)
+
+```
+
+
+```{r}
+library(shiny)
+library(tidyverse)
+library(DT)
+library(plotly)
+library(stringr)
+
+# Load and preprocess the data
+all_placement_insights <- read_csv(file.path(Sys.getenv("USERPROFILE"), "Downloads", "schoolData.csv"))
+
+# Add Sport classification
+all_placement_insights <- all_placement_insights %>%
+  filter(!is.na(LCTR), !is.na(clickroi28), !is.na(Spend), !is.na(Impressions)) %>%
+  filter(LCTR != 1 & LCTR > 0.01) %>%
+  mutate(
+    Impressions_new = Impressions / LCTR,
+    Sport = case_when(
+      str_detect(CampaignName, "MBB|Men's Basketball") ~ "Men's Basketball",
+      str_detect(CampaignName, "WBB|Women's Basketball") ~ "Women's Basketball",
+      str_detect(CampaignName, "FB|Football") ~ "Football",
+      str_detect(CampaignName, "SB|Softball") ~ "Softball",
+      str_detect(CampaignName, "BSB|Baseball") ~ "Baseball",
+      str_detect(CampaignName, "MS|Men's Soccer") ~ "Men's Soccer",
+      str_detect(CampaignName, "WS|Women's Soccer") ~ "Women's Soccer",
+      str_detect(CampaignName, "V24|Volleyball") ~ "Volleyball",
+      str_detect(CampaignName, "WG|Gymnastics") ~ "Gymnastics",
+      str_detect(CampaignName, "MWP|Water Polo") ~ "Water Polo",
+      str_detect(CampaignName, "Track|XC") ~ "Track & Field / XC",
+      TRUE ~ "Other"
+    )
+  )
+
+# UI
+ui <- fluidPage(
+  titlePanel("School Placement Insights Explorer"),
+
+  tabsetPanel(
+
+    # Tab 1: Overview
+    tabPanel("Overview",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("sport", "Select Sport:",
+                      choices = sort(unique(all_placement_insights$Sport)),
+                      selected = unique(all_placement_insights$Sport)[1]),
+          selectInput("campaign_name", "Select Campaign Name:", choices = NULL)
+        ),
+        mainPanel(
+          h4("Instructions"),
+          p("Use the dropdowns to filter the data by sport and campaign name."),
+          p("Then switch to the Data Table or ROI Visualization tabs to explore the results.")
+        )
+      )
+    ),
+
+    # Tab 2: Data Table
+    tabPanel("Data Table", 
+      DTOutput("data_table")
+    ),
+
+    # Tab 3: ROI Visualization
+    tabPanel("ROI Visualization",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("sport_roi", "Select Sport:",
+                      choices = sort(unique(all_placement_insights$Sport)),
+                      selected = unique(all_placement_insights$Sport)[1]),
+          selectInput("campaign_name_roi", "Select Campaign Name:", choices = NULL)
+        ),
+        mainPanel(
+          h4("Average ROI by Type"),
+          plotOutput("roi_plot_avg"),
+          br(),
+          h4("ROI Distribution by Type"),
+          plotOutput("roi_plot_box"),
+          br(),
+          h4("Spend vs Impressions by Campaign"),
+          plotlyOutput("roi_bubble_plot")
+        )
+      )
+    )
+  )
+)
+
+# Server
+server <- function(input, output, session) {
+
+  # Update dropdowns
+  observeEvent(input$sport, {
+    updateSelectInput(session, "campaign_name",
+      choices = c("All", sort(unique(all_placement_insights$CampaignName[all_placement_insights$Sport == input$sport]))),
+      selected = "All"
+    )
+  })
+
+  observeEvent(input$sport_roi, {
+    updateSelectInput(session, "campaign_name_roi",
+      choices = c("All", sort(unique(all_placement_insights$CampaignName[all_placement_insights$Sport == input$sport_roi]))),
+      selected = "All"
+    )
+  })
+
+  # Data filtered by Overview filters
+  filtered_data <- reactive({
+    df <- all_placement_insights %>% filter(Sport == input$sport)
+    if (input$campaign_name != "All") {
+      df <- df %>% filter(CampaignName == input$campaign_name)
+    }
+    df
+  })
+
+  # Data filtered by ROI filters
+  filtered_data_roi <- reactive({
+    df <- all_placement_insights %>% filter(Sport == input$sport_roi)
+    if (input$campaign_name_roi != "All") {
+      df <- df %>% filter(CampaignName == input$campaign_name_roi)
+    }
+    df
+  })
+
+  # Data table output
+  output$data_table <- renderDT({
+    datatable(filtered_data(), options = list(pageLength = 10))
+  })
+
+  # Plot 1: Average ROI bar chart
+  output$roi_plot_avg <- renderPlot({
+    df <- filtered_data_roi()
+    if (nrow(df) > 0) {
+      roi_df <- df %>%
+        select(viewroi28, viewroi7, viewroi1,
+               clickroi28, clickroi7, clickroi1) %>%
+        pivot_longer(cols = everything(), names_to = "ROI_Type", values_to = "Value") %>%
+        group_by(ROI_Type) %>%
+        summarise(Value = mean(Value, na.rm = TRUE))
+
+      ggplot(roi_df, aes(x = ROI_Type, y = Value, fill = ROI_Type)) +
+        geom_bar(stat = "identity") +
+        theme_minimal() +
+        labs(y = "ROI", x = "ROI Type") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
+  })
+
+  # Plot 2: ROI distribution boxplot
+  output$roi_plot_box <- renderPlot({
+    df <- filtered_data_roi()
+    if (nrow(df) > 0) {
+      roi_df <- df %>%
+        select(viewroi28, viewroi7, viewroi1,
+               clickroi28, clickroi7, clickroi1) %>%
+        pivot_longer(cols = everything(), names_to = "ROI_Type", values_to = "Value")
+
+      ggplot(roi_df, aes(x = ROI_Type, y = Value, fill = ROI_Type)) +
+        geom_boxplot() +
+        theme_minimal() +
+        labs(y = "ROI", x = "ROI Type") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
+  })
+
+  # Plot 3: Spend vs Impressions bubble chart
+  output$roi_bubble_plot <- renderPlotly({
+    df <- filtered_data_roi()
+    if (nrow(df) > 0) {
+      summary_df <- df %>%
+        group_by(CampaignName) %>%
+        summarise(
+          avg_impressions = mean(Impressions_new, na.rm = TRUE),
+          avg_spend = mean(Spend, na.rm = TRUE),
+          avg_revenue = mean(Revenue_28d_clickTotal, na.rm = TRUE),
+          .groups = "drop"
+        )
+
+      plot_ly(
+        summary_df,
+        x = ~avg_spend,
+        y = ~avg_impressions,
+        type = 'scatter',
+        mode = 'markers',
+        text = ~paste("Campaign: ", CampaignName,
+                      "<br>Avg Revenue: ", round(avg_revenue, 2),
+                      "<br>Avg Spend: ", round(avg_spend, 2)),
+        marker = list(
+          size = ~avg_spend / max(avg_spend, na.rm = TRUE) * 20,
+          color = ~avg_spend,
+          colorscale = 'Viridis',
+          showscale = TRUE
+        )
+      ) %>%
+      layout(
+        title =
+
+```
+
+
+
+
+```{r}
+library(shiny)
+library(tidyverse)
+library(DT)
+library(plotly)
+library(stringr)
+
+# Load and preprocess the data
+all_placement_insights <- read_csv(file.path(Sys.getenv("USERPROFILE"), "Downloads", "schoolData.csv"))
+
+# Clean and classify
+all_placement_insights <- all_placement_insights %>%
+  filter(!is.na(LCTR), !is.na(clickroi28), !is.na(Spend), !is.na(Impressions)) %>%
+  filter(LCTR != 1 & LCTR > 0.01) %>%
+  mutate(
+    Impressions_new = Impressions / LCTR,
+    Sport = case_when(
+      str_detect(CampaignName, "MBB|Men's Basketball") ~ "Men's Basketball",
+      str_detect(CampaignName, "WBB|Women's Basketball") ~ "Women's Basketball",
+      str_detect(CampaignName, "FB|Football") ~ "Football",
+      str_detect(CampaignName, "SB|Softball") ~ "Softball",
+      str_detect(CampaignName, "BSB|Baseball") ~ "Baseball",
+      str_detect(CampaignName, "MS|Men's Soccer") ~ "Men's Soccer",
+      str_detect(CampaignName, "WS|Women's Soccer") ~ "Women's Soccer",
+      str_detect(CampaignName, "V24|Volleyball") ~ "Volleyball",
+      str_detect(CampaignName, "WG|Gymnastics") ~ "Gymnastics",
+      str_detect(CampaignName, "MWP|Water Polo") ~ "Water Polo",
+      str_detect(CampaignName, "Track|XC") ~ "Track & Field / XC",
+      TRUE ~ "Other"
+    )
+  )
+
+# UI
+ui <- fluidPage(
+  titlePanel("School Placement Insights Explorer"),
+
+  tabsetPanel(
+    # Tab 1: Overview
+    tabPanel("Overview",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("sport", "Select Sport:",
+                      choices = sort(unique(all_placement_insights$Sport)),
+                      selected = unique(all_placement_insights$Sport)[1]),
+          selectInput("campaign_name", "Select Campaign Name:", choices = NULL)
+        ),
+        mainPanel(
+          h4("Instructions"),
+          p("Use the dropdowns to filter the data by sport and campaign name."),
+          p("Then switch to the Data Table or ROI Visualization tabs to explore the results.")
+        )
+      )
+    ),
+
+    # Tab 2: Data Table
+    tabPanel("Data Table", 
+      DTOutput("data_table")
+    ),
+
+    # Tab 3: ROI Visualizations
+    tabPanel("ROI Visualization",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("sport_roi", "Select Sport:",
+                      choices = sort(unique(all_placement_insights$Sport)),
+                      selected = unique(all_placement_insights$Sport)[1]),
+          selectInput("campaign_name_roi", "Select Campaign Name:", choices = NULL)
+        ),
+        mainPanel(
+          tabsetPanel(
+            tabPanel("Average ROI", plotOutput("roi_plot_avg")),
+            tabPanel("ROI Distribution", plotOutput("roi_plot_box")),
+            tabPanel("Spend vs Impressions", plotlyOutput("roi_bubble_plot"))
+          )
+        )
+      )
+    )
+  )
+)
+
+# Server
+server <- function(input, output, session) {
+
+  # Update dropdowns when sport changes
+  observeEvent(input$sport, {
+    names <- all_placement_insights %>%
+      filter(Sport == input$sport) %>%
+      pull(CampaignName) %>%
+      unique() %>%
+      sort()
+    updateSelectInput(session, "campaign_name", choices = c("All", names), selected = "All")
+  })
+
+  observeEvent(input$sport_roi, {
+    names <- all_placement_insights %>%
+      filter(Sport == input$sport_roi) %>%
+      pull(CampaignName) %>%
+      unique() %>%
+      sort()
+    updateSelectInput(session, "campaign_name_roi", choices = c("All", names), selected = "All")
+  })
+
+  # Filtered data for Overview tab
+  filtered_data <- reactive({
+    df <- all_placement_insights %>% filter(Sport == input$sport)
+    if (input$campaign_name != "All") {
+      df <- df %>% filter(CampaignName == input$campaign_name)
+    }
+    df
+  })
+
+  # Filtered data for ROI tab
+  filtered_data_roi <- reactive({
+    df <- all_placement_insights %>% filter(Sport == input$sport_roi)
+    if (input$campaign_name_roi != "All") {
+      df <- df %>% filter(CampaignName == input$campaign_name_roi)
+    }
+    df
+  })
+
+  # Data Table
+  output$data_table <- renderDT({
+    datatable(filtered_data(), options = list(pageLength = 10))
+  })
+
+  # Plot 1: Average ROI
+  output$roi_plot_avg <- renderPlot({
+    df <- filtered_data_roi()
+    if (nrow(df) > 0) {
+      roi_df <- df %>%
+        select(viewroi28, viewroi7, viewroi1,
+               clickroi28, clickroi7, clickroi1) %>%
+        pivot_longer(cols = everything(), names_to = "ROI_Type", values_to = "Value") %>%
+        group_by(ROI_Type) %>%
+        summarise(Value = mean(Value, na.rm = TRUE))
+
+      ggplot(roi_df, aes(x = ROI_Type, y = Value, fill = ROI_Type)) +
+        geom_bar(stat = "identity") +
+        theme_minimal() +
+        labs(title = "Average ROI by Type", y = "ROI", x = "ROI Type") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
+  })
+
+  # Plot 2: ROI Boxplot
+  output$roi_plot_box <- renderPlot({
+    df <- filtered_data_roi()
+    if (nrow(df) > 0) {
+      roi_df <- df %>%
+        select(viewroi28, viewroi7, viewroi1,
+               clickroi28, clickroi7, clickroi1) %>%
+        pivot_longer(cols = everything(), names_to = "ROI_Type", values_to = "Value")
+
+      ggplot(roi_df, aes(x = ROI_Type, y = Value, fill = ROI_Type)) +
+        geom_boxplot() +
+        theme_minimal() +
+        labs(title = "ROI Distribution by Type", y = "ROI", x = "ROI Type") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
+  })
+
+  # Plot 3: Bubble chart
+  output$roi_bubble_plot <- renderPlotly({
+    df <- filtered_data_roi()
+    if (nrow(df) > 0) {
+      summary_df <- df %>%
+        group_by(CampaignName) %>%
+        summarise(
+          avg_impressions = mean(Impressions_new, na.rm = TRUE),
+          avg_spend = mean(Spend, na.rm = TRUE),
+          avg_revenue = mean(Revenue_28d_clickTotal, na.rm = TRUE),
+          .groups = "drop"
+        )
+
+      plot_ly(
+        summary_df,
+        x = ~avg_spend,
+        y = ~avg_impressions,
+        type = 'scatter',
+        mode = 'markers',
+        text = ~paste("Campaign: ", CampaignName,
+                      "<br>Avg Revenue: ", round(avg_revenue, 2),
+                      "<br>Avg Spend: ", round(avg_spend, 2)),
+        marker = list(
+          size = ~avg_spend / max(avg_spend, na.rm = TRUE) * 20,
+          color = ~avg_spend,
+          colorscale = 'Viridis',
+          showscale = TRUE
+        )
+      ) %>%
+      layout(
+        title = "Avg Impressions vs Spend by Campaign",
+        xaxis = list(title = "Average Spend"),
+        yaxis = list(title = "Average Impressions")
+      )
+    }
+  })
+}
+
+# Run the app
+shinyApp(ui, server)
+
+```
+
+```{r}
+library(shiny)
+library(tidyverse)
+library(DT)
+library(plotly)
+library(stringr)
+
+# Load and preprocess the data
+all_placement_insights <- read_csv(file.path(Sys.getenv("USERPROFILE"), "Downloads", "schoolData.csv"))
+
+# Clean and classify
+all_placement_insights <- all_placement_insights %>%
+  filter(!is.na(LCTR), !is.na(clickroi28), !is.na(Spend), !is.na(Impressions)) %>%
+  filter(LCTR != 1 & LCTR > 0.01) %>%
+  mutate(
+    Impressions_new = Impressions / LCTR,
+    Sport = case_when(
+      str_detect(CampaignName, "MBB|Men's Basketball") ~ "Men's Basketball",
+      str_detect(CampaignName, "WBB|Women's Basketball") ~ "Women's Basketball",
+      str_detect(CampaignName, "FB|Football") ~ "Football",
+      str_detect(CampaignName, "SB|Softball") ~ "Softball",
+      str_detect(CampaignName, "BSB|Baseball") ~ "Baseball",
+      str_detect(CampaignName, "MS|Men's Soccer") ~ "Men's Soccer",
+      str_detect(CampaignName, "WS|Women's Soccer") ~ "Women's Soccer",
+      str_detect(CampaignName, "V24|Volleyball") ~ "Volleyball",
+      str_detect(CampaignName, "WG|Gymnastics") ~ "Gymnastics",
+      str_detect(CampaignName, "MWP|Water Polo") ~ "Water Polo",
+      str_detect(CampaignName, "Track|XC") ~ "Track & Field / XC",
+      TRUE ~ "Other"
+    )
+  )
+
+# UI
+ui <- fluidPage(
+  titlePanel("School Placement Insights Explorer"),
+
+  tabsetPanel(
+    # Tab 1: Overview
+    tabPanel("Overview",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("sport", "Select Sport:",
+                      choices = sort(unique(all_placement_insights$Sport)),
+                      selected = unique(all_placement_insights$Sport)[1]),
+          selectInput("campaign_name", "Select Campaign Name:", choices = NULL)
+        ),
+        mainPanel(
+          h4("Instructions"),
+          p("Use the dropdowns to filter the data by sport and campaign name."),
+          p("Then switch to the Data Table or ROI Visualization tabs to explore the results.")
+        )
+      )
+    ),
+
+    # Tab 2: Data Table
+    tabPanel("Data Table", 
+      DTOutput("data_table")
+    ),
+
+    # Tab 3: ROI Visualizations
+    tabPanel("ROI Visualization",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("sport_roi", "Select Sport:",
+                      choices = sort(unique(all_placement_insights$Sport)),
+                      selected = unique(all_placement_insights$Sport)[1]),
+          selectInput("campaign_name_roi", "Select Campaign Name:", choices = NULL)
+        ),
+        mainPanel(
+          tabsetPanel(
+            tabPanel("Average ROI", plotOutput("roi_plot_avg")),
+            tabPanel("ROI Distribution", plotOutput("roi_plot_box")),
+            tabPanel("Spend vs Impressions", plotlyOutput("roi_bubble_plot"))
+          )
+        )
+      )
+    )
+  )
+)
+
+# Server
+server <- function(input, output, session) {
+
+  # Update dropdowns when sport changes
+  observeEvent(input$sport, {
+    names <- all_placement_insights %>%
+      filter(Sport == input$sport) %>%
+      pull(CampaignName) %>%
+      unique() %>%
+      sort()
+    updateSelectInput(session, "campaign_name", choices = c("All", names), selected = "All")
+  })
+
+  observeEvent(input$sport_roi, {
+    names <- all_placement_insights %>%
+      filter(Sport == input$sport_roi) %>%
+      pull(CampaignName) %>%
+      unique() %>%
+      sort()
+    updateSelectInput(session, "campaign_name_roi", choices = c("All", names), selected = "All")
+  })
+
+  # Filtered data for Overview tab
+  filtered_data <- reactive({
+    df <- all_placement_insights %>% filter(Sport == input$sport)
+    if (input$campaign_name != "All") {
+      df <- df %>% filter(CampaignName == input$campaign_name)
+    }
+    df
+  })
+
+  # Filtered data for ROI tab
+  filtered_data_roi <- reactive({
+    df <- all_placement_insights %>% filter(Sport == input$sport_roi)
+    if (input$campaign_name_roi != "All") {
+      df <- df %>% filter(CampaignName == input$campaign_name_roi)
+    }
+    df
+  })
+
+  # Data Table
+  output$data_table <- renderDT({
+    datatable(filtered_data(), options = list(pageLength = 10))
+  })
+
+  # Plot 1: Average ROI
+  output$roi_plot_avg <- renderPlot({
+    df <- filtered_data_roi()
+    if (nrow(df) > 0) {
+      roi_df <- df %>%
+        select(viewroi28, viewroi7, viewroi1,
+               clickroi28, clickroi7, clickroi1) %>%
+        pivot_longer(cols = everything(), names_to = "ROI_Type", values_to = "Value") %>%
+        group_by(ROI_Type) %>%
+        summarise(Value = mean(Value, na.rm = TRUE))
+
+      ggplot(roi_df, aes(x = ROI_Type, y = Value, fill = ROI_Type)) +
+        geom_bar(stat = "identity") +
+        theme_minimal() +
+        labs(title = "Average ROI by Type", y = "ROI", x = "ROI Type") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
+  })
+
+  # Plot 2: ROI Boxplot
+  output$roi_plot_box <- renderPlot({
+    df <- filtered_data_roi()
+    if (nrow(df) > 0) {
+      roi_df <- df %>%
+        select(viewroi28, viewroi7, viewroi1,
+               clickroi28, clickroi7, clickroi1) %>%
+        pivot_longer(cols = everything(), names_to = "ROI_Type", values_to = "Value")
+
+      ggplot(roi_df, aes(x = ROI_Type, y = Value, fill = ROI_Type)) +
+        geom_boxplot() +
+        theme_minimal() +
+        labs(title = "ROI Distribution by Type", y = "ROI", x = "ROI Type") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
+  })
+
+  # Plot 3: Bubble chart
+  output$roi_bubble_plot <- renderPlotly({
+    df <- filtered_data_roi()
+    if (nrow(df) > 0) {
+      summary_df <- df %>%
+        group_by(CampaignName) %>%
+        summarise(
+          avg_impressions = mean(Impressions_new, na.rm = TRUE),
+          avg_spend = mean(Spend, na.rm = TRUE),
+          avg_revenue = mean(Revenue_28d_clickTotal, na.rm = TRUE),
+          .groups = "drop"
+        )
+
+      plot_ly(
+        summary_df,
+        x = ~avg_spend,
+        y = ~avg_impressions,
+        type = 'scatter',
+        mode = 'markers',
+        text = ~paste("Campaign: ", CampaignName,
+                      "<br>Avg Revenue: ", round(avg_revenue, 2),
+                      "<br>Avg Spend: ", round(avg_spend, 2)),
+        marker = list(
+          size = ~avg_spend / max(avg_spend, na.rm = TRUE) * 20,
+          color = ~avg_spend,
+          colorscale = 'Viridis',
+          showscale = TRUE
+        )
+      ) %>%
+      layout(
+        title = "Avg Impressions vs Spend by Campaign",
+        xaxis = list(title = "Average Spend"),
+        yaxis = list(title = "Average Impressions")
+      )
+    }
+  })
+}
+
+# Run the app
+shinyApp(ui, server)
+```
+
+
+
+
+
+
+
+
+
+SECOND TRY
+```{r}
+
+
+library(shiny)
+library(tidyverse)
+library(DT)
+
+ui <- fluidPage(
+  titlePanel("Meta Ads Data Synthesizer"),
+
+  sidebarLayout(
+    sidebarPanel(
+      fileInput("insights", "Upload Insights CSV", accept = ".csv"),
+      fileInput("placements", "Upload Placement Insights CSV", accept = ".csv"),
+      fileInput("demographics", "Upload Demographics CSV", accept = ".csv"),
+      actionButton("process", "Generate Merged Dataset"),
+      br(), br(),
+      downloadButton("downloadData", "Download Merged CSV")
+    ),
+
+    mainPanel(
+      tabsetPanel(
+        tabPanel("Preview", DTOutput("preview")),
+        tabPanel("ROI Plot", plotOutput("roi_plot"))
+      )
+    )
+  )
+)
+
+server <- function(input, output, session) {
+
+  merged_data <- eventReactive(input$process, {
+    req(input$insights, input$placements, input$demographics)
+
+    # Read uploaded files
+    Insights <- read_csv(input$insights$datapath)
+    PlacementInsights <- read_csv(input$placements$datapath)
+    Demographics <- read_csv(input$demographics$datapath)
+
+    # Calculate LCTR
+    PlacementInsights$LCTR <- PlacementInsights$Link.Clicks / PlacementInsights$Impressions
+    PlacementInsights$LCTR[is.infinite(PlacementInsights$LCTR)] <- 0
+
+    # Summarize
+    PlacementSummary <- PlacementInsights %>%
+      group_by(CampaignId, AdId) %>%
+      summarise(ImpressionsTotal = sum(Impressions, na.rm = TRUE),
+                ReachTotal = sum(Reach, na.rm = TRUE),
+                ClicksTotal = sum(Clicks, na.rm = TRUE),
+                Link.ClicksTotal = sum(Link.Clicks, na.rm = TRUE))
+
+    InsightsSummary <- Insights %>%
+      group_by(CampaignId, AdId) %>%
+      summarise(across(starts_with("Revenue"), sum, na.rm = TRUE))
+
+    DemographicsSummary <- Demographics %>%
+      group_by(AdId) %>%
+      summarise(Spend = sum(Spend, na.rm = TRUE))
+
+    # Merge
+    tmp <- full_join(InsightsSummary, PlacementSummary, by = c("CampaignId", "AdId"))
+    tmp2 <- full_join(tmp, DemographicsSummary, by = "AdId")
+    tmp3 <- tmp2 %>% 
+      mutate(
+        viewroi28 = (Revenue_28d_viewTotal - Spend) / Spend,
+        viewroi7  = (Revenue_7d_viewTotal - Spend) / Spend,
+        viewroi1  = (Revenue_1d_viewTotal - Spend) / Spend,
+        clickroi28 = (Revenue_28d_clickTotal - Spend) / Spend,
+        clickroi7  = (Revenue_7d_clickTotal - Spend) / Spend,
+        clickroi1  = (Revenue_1d_clickTotal - Spend) / Spend
+      )
+
+    # Final merged dataset
+    all_placement_insights <- full_join(PlacementInsights, tmp3, by = c("CampaignId", "AdId"))
+    all_placement_insights
+  })
+
+  output$preview <- renderDT({
+    req(merged_data())
+    datatable(merged_data(), options = list(pageLength = 10))
+  })
+
+  output$download
+
+```
+
+
+```{r}
+all_placement_insights <- read_csv(file.path(Sys.getenv("USERPROFILE"), "Downloads", "schoolData.csv"))
+
+# Add Sport classification
+all_placement_insights <- all_placement_insights %>%
+  mutate(Sport = case_when(
+    str_detect(CampaignName, "MBB|Men's Basketball") ~ "Men's Basketball",
+    str_detect(CampaignName, "WBB|Women's Basketball") ~ "Women's Basketball",
+    str_detect(CampaignName, "FB|Football") ~ "Football",
+    str_detect(CampaignName, "SB|Softball") ~ "Softball",
+    str_detect(CampaignName, "BSB|Baseball") ~ "Baseball",
+    str_detect(CampaignName, "MS|Men's Soccer") ~ "Men's Soccer",
+    str_detect(CampaignName, "WS|Women's Soccer") ~ "Women's Soccer",
+    str_detect(CampaignName, "V24|Volleyball") ~ "Volleyball",
+    str_detect(CampaignName, "WG|Gymnastics") ~ "Gymnastics",
+    str_detect(CampaignName, "MWP|Water Polo") ~ "Water Polo",
+    str_detect(CampaignName, "Track|XC") ~ "Track & Field / XC",
+    TRUE ~ "Other"
+  ))
+
+```
+
+
+```{r}
+sidebarPanel(
+  selectInput("sport", "Select Sport:",
+              choices = sort(unique(all_placement_insights$Sport)),
+              selected = unique(all_placement_insights$Sport)[1])
+)
+
+```
+
+
+```{r}
+filtered_data <- reactive({
+  all_placement_insights %>%
+    filter(Sport == input$sport)
+})
+
+```
+
+
+```{r}
+sidebarPanel(
+  selectInput("sport", "Select Sport:",
+              choices = sort(unique(all_placement_insights$Sport)),
+              selected = unique(all_placement_insights$Sport)[1])
+)
+
+```
+
+
+```{r}
+filtered_data <- reactive({
+  all_placement_insights %>%
+    filter(Sport == input$sport)
+})
+shinyApp(ui, server)
+
+```
+
+
+
