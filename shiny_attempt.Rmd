@@ -299,7 +299,7 @@ shinyApp(ui, server)
 
 ```
 
-add in an all button 
+add in an all button --- ignore 
 
 
 puts all graphs on one tab
@@ -653,6 +653,10 @@ server <- function(input, output, session) {
 
 ```
 
+
+
+
+USE THIS ONE
 Fixed graphs 
 ```{r}
 library(shiny)
