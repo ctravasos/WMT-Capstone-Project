@@ -77,6 +77,90 @@ ggplot(gm_demographics_groups, aes(x = age, y = total_spend, fill = gender)) +
 ```
 
 ```{r}
+library(lubridate)
+
+gm_demographics_groups_years <- georgemason_demographics %>%
+  # 1. Create the Year column first from AdInsightsDate
+  mutate(Year = year(date_start)) %>%
+
+  # 2. Apply your filters
+  filter(age != "Unknown") %>%
+  filter(gender != "unknown") %>%
+
+  # 3. Group by Year, Age, and Gender
+  group_by(Year, age, gender) %>%
+
+  # 4. Summarise the data for each group
+  summarise(
+    total_reach = sum(Reach, na.rm = TRUE),
+    total_impressions = sum(Impressions, na.rm = TRUE),
+    total_link_clicks = sum(LinkClicks, na.rm = TRUE),
+    total_spend = sum(Spend, na.rm = TRUE), # Added na.rm=TRUE here too, good practice
+    .groups = 'drop' # Optional: drops grouping structure after summarise
+  ) %>%
+
+  # 5. Calculate CTR for each summarized group
+  mutate(CTR = (total_link_clicks / total_impressions) * 100)
+
+
+
+library(ggplot2)
+
+ggplot(gm_demographics_groups_years, aes(x = age, y = total_impressions, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Impressions by Age and Gender, Faceted by Year",
+    x = "Age Group",
+    y = "Total Impressions"
+   ) +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1") +
+  facet_wrap(~ Year)
+```
+
+```{r}
+ggplot(gm_demographics_groups_years, aes(x = age, y = total_link_clicks, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Link Clicks by Age and Gender Faceted By Year", x = "Age Group", y = "Total Link Clicks") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1")+
+  facet_wrap(~Year)
+```
+
+```{r}
+ggplot(gm_demographics_groups_years, aes(x = age, y = total_reach, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Reach by Gender Faceted By Year", x = "Age Group", y = "Total Reach") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1")+
+  facet_wrap(~Year)
+```
+
+```{r}
+ggplot(gm_demographics_groups_years, aes(x = age, y = CTR, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Click-Through Rate by Age and Gender Faceted By Year", x = "Age Group", y = "CTR (%)") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set1")+
+  facet_wrap(~Year)
+```
+
+
+```{r}
+ggplot(gm_demographics_groups_years, aes(x = age, y = total_spend, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Total Spend by Age and Gender faceted By Year",
+       x = "Age Group",
+       y = "Total Spend") +
+  scale_fill_manual(values = c("female" = "#E41A1C", "male" = "#377EB8")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))+
+  facet_wrap(~Year)
+```
+
+
+
+```{r}
 gm_summarized_date_data <- georgemason_demographics %>%
   filter(gender %in% c("male", "female")) %>% 
    filter(age != "Unknown") %>% 
@@ -184,6 +268,45 @@ ggplot(gm_demographics_sports_groups, aes(x = age, y = CTR, fill = gender)) +
   labs(title = "CTR by Age and Gender", x = "Age Group", y = "Click Through Rate") +
   theme_minimal() +
   facet_wrap(~ Sport) +
+  scale_fill_brewer(palette = "Set1")
+```
+
+```{r}
+gm_demographics_sports_groups_year <- gm_demographics_sports %>%
+  # 1. Create the Year column first
+  mutate(Year = year(date_start)) %>%
+
+  # 2. Apply your filters
+  filter(age != "Unknown") %>%
+  filter(gender != "unknown") %>%
+
+  # 3. Group by Year, Age, Gender, AND Sport
+  group_by(Year, age, gender, Sport) %>%
+
+  # 4. Summarise the data for each group
+  summarise(
+    total_reach = sum(Reach, na.rm = TRUE),
+    total_impressions = sum(Impressions, na.rm = TRUE),
+    total_link_clicks = sum(LinkClicks, na.rm = TRUE),
+    total_spend = sum(Spend, na.rm = TRUE),
+    .groups = 'drop' # Good practice to drop grouping structure after summarise
+  ) %>%
+
+  # 5. Calculate CTR for each summarized group
+  mutate(CTR = (total_link_clicks / total_impressions) * 100)
+```
+
+
+```{r}
+n_unique_sports <- length(unique(gm_demographics_sports_groups_year$Sport))
+
+
+
+ggplot(gm_demographics_sports_groups_year, aes(x = age, y = total_impressions, fill = gender)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Impressions by Age and Gender Faceted By Sport (Rows) and Year", x = "Age Group", y = "Total Impressions") +
+  theme_minimal() +
+  facet_wrap(~ Sport + Year, nrow = n_unique_sports) +
   scale_fill_brewer(palette = "Set1")
 ```
 
