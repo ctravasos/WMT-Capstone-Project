@@ -1,0 +1,516 @@
+---
+title: "Shiny App"
+author: "Stefan Lechmanik"
+date: "2025-04-13"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(tidyverse)
+library(stringr)
+library(lubridate)
+library(dplyr)
+```
+
+
+
+```{r}
+miami_demographics <-read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/Miami Meta Ads Insights by Demographics 2022 - 2025 (1).csv")
+```
+
+```{r}
+miami_demographics_sports <- miami_demographics %>% 
+  mutate(Sport = case_when(
+    grepl("FB", CampaignName) ~ "Football",
+    grepl("MBB", CampaignName) ~ "Men's Basketball",
+    grepl("WBB", CampaignName) ~ "Women's Basketball",
+    grepl("BA", CampaignName) ~ "Baseball",
+    grepl("B22", CampaignName) ~ "Baseball",
+    grepl("B23", CampaignName) ~ "Baseball",
+    grepl("Women's Basketball", AdName) ~ "Women's Basketball",
+    grepl("Men's Basketball", AdName) ~ "Men's Basketball",
+    grepl("MBB21", AdName) ~ "Men's Basketball",
+    grepl("M24", AdName) | grepl("M24", CampaignName) ~ "Men's Basketball",  # Added CampaignName check
+    grepl("W24", AdName) | grepl("W24", CampaignName) ~ "Women's Basketball",  # Added CampaignName check
+    grepl("22FB", AdName) | grepl("F22", CampaignName) ~ "Football",
+    grepl("F23", CampaignName) ~ "Football",
+    grepl("F24", CampaignName) ~ "Football",
+    grepl("F25", CampaignName) ~ "Football",
+    grepl("B25", CampaignName) ~ "Baseball",
+    grepl("Season Ticket Holder Benefits", CampaignName) & AdsetName == "Lookalike" ~ "Football",
+    TRUE ~ "Unknown"
+  ))
+```
+
+
+```{r}
+miami_demographics_sports_groups_year <- miami_demographics_sports %>%
+  # 1. Create the Year column first
+  mutate(Year = year(AdInsightsDate)) %>%
+  mutate(School = "Miami") %>% 
+
+  # 2. Apply your filters
+  filter(Age != "Unknown") %>%
+  filter(Gender != "unknown") %>%
+
+  # 3. Group by Year, Age, Gender, AND Sport
+  group_by(Year, Age, Gender, Sport) %>%
+
+  # 4. Summarise the data for each group
+  summarise(
+    total_reach = sum(Reach, na.rm = TRUE),
+    total_impressions = sum(Impressions, na.rm = TRUE),
+    total_link_clicks = sum(LinkClicks, na.rm = TRUE),
+    total_spend = sum(Spend, na.rm = TRUE),
+    .groups = 'drop' # Good practice to drop grouping structure after summarise
+  ) %>%
+
+  # 5. Calculate CTR for each summarized group
+  mutate(CTR = (total_link_clicks / total_impressions) * 100)
+```
+
+
+```{r}
+southcarolina_demographics <-read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/South Carolina Meta Ads Insights by Demographics 2022 - 2025.csv")
+```
+
+
+```{r}
+sc_demographics_sports <- southcarolina_demographics %>% 
+  mutate(Sport = case_when(
+    grepl("FB", CampaignName) ~ "Football",
+    grepl("MBB", CampaignName) ~ "Men's Basketball",
+    grepl("WBB", CampaignName) ~ "Women's Basketball",
+    grepl("BA", CampaignName) ~ "Baseball",
+    grepl("B22", CampaignName) ~ "Baseball",
+    grepl("B23", CampaignName) ~ "Baseball",
+    grepl("Baseball", CampaignName) ~ "Baseball",
+    grepl("Women's Basketball", AdName) ~ "Women's Basketball",
+    grepl("Men's Basketball", AdName) ~ "Men's Basketball",
+    grepl("MBB24", AdName) ~ "Men's Basketball",
+    grepl("M24", AdName) | grepl("M24", CampaignName) ~ "Men's Basketball",  # Added CampaignName check
+    grepl("W24", AdName) | grepl("W24", CampaignName) ~ "Women's Basketball",  # Added CampaignName check
+    grepl("22FB", AdName) | grepl("F22", CampaignName)|grepl("FB22", AdName) ~ "Football",
+    grepl("FB23", CampaignName) ~ "Football",
+    grepl("FB24", CampaignName) ~ "Football",
+    grepl("FB25", CampaignName) ~ "Football",
+    grepl("B25", CampaignName) ~ "Baseball",
+    TRUE ~ "Unknown"
+  ))
+```
+
+```{r}
+sc_demographics_sports_groups_year <- sc_demographics_sports %>%
+  # 1. Create the Year column first
+  mutate(Year = year(AdInsightsDate)) %>%
+  mutate(School = "South Carolina") %>% 
+
+  # 2. Apply your filters
+  filter(Age != "Unknown") %>%
+  filter(Gender != "unknown") %>%
+
+  # 3. Group by Year, Age, Gender, AND Sport
+  group_by(Year, Age, Gender, Sport) %>%
+
+  # 4. Summarise the data for each group
+  summarise(
+    total_reach = sum(Reach, na.rm = TRUE),
+    total_impressions = sum(Impressions, na.rm = TRUE),
+    total_link_clicks = sum(LinkClicks, na.rm = TRUE),
+    total_spend = sum(Spend, na.rm = TRUE),
+    .groups = 'drop' # Good practice to drop grouping structure after summarise
+  ) %>%
+
+  # 5. Calculate CTR for each summarized group
+  mutate(CTR = (total_link_clicks / total_impressions) * 100)
+```
+
+
+```{r}
+stanford_demographics <- read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/Stanford Meta Ads Insights by Demographics 2022 - 2025.csv")
+```
+
+```{r}
+stanford_demographics_sports<- stanford_demographics%>%
+  mutate(Sport = case_when(
+    str_detect(CampaignName, "WBB|Women's Basketball|W24|W23|WBB2425") ~ "Women's Basketball",
+    str_detect(CampaignName, "FB|Football|F24|FB24") ~ "Football",
+    str_detect(CampaignName, "^BSB|Baseball|D25|D24|BSB24$") ~ "Baseball",
+    str_detect(CampaignName, "(?<!B)SB(?!S)|Softball|SB24|SB25") ~ "Softball",
+    str_detect(CampaignName, "WS|Women's Soccer|WS24") ~ "Women's Soccer",
+    str_detect(CampaignName, "MS|Men's Soccer|S24|S25") ~ "Men's Soccer",
+    str_detect(CampaignName, "V24|Volleyball|Women's VB|WVB24") ~ "Volleyball",
+    str_detect(CampaignName, "WG|Gymnastics") ~ "Gymnastics",
+    str_detect(CampaignName, "MWP|Water Polo") ~ "Water Polo",
+    str_detect(CampaignName, "Track|XC") ~ "Track & Field / XC",
+    str_detect(CampaignName, "FH24") ~ "Field Hockey",
+    str_detect(CampaignName, "LX24|LX25") ~ "Lacrosse",
+    str_detect(CampaignName, "M24|M25") ~ "Miscellaneous",
+    str_detect(CampaignName, "MBB|Men's Basketball|B24") ~ "Men's Basketball",
+    TRUE ~ "Other"
+  ))
+```
+
+```{r}
+colnames(stanford_demographics)
+```
+
+
+```{r}
+stanford_demographics_age_gender_sports_groups <- stanford_demographics_sports %>%
+  mutate(
+    AdInsightsDate = as.Date(AdInsightsDate),  # you can add format = "%Y-%m-%d" if needed
+    Year = year(AdInsightsDate),
+    School = "Stanford"
+  ) %>%
+  filter(Age != "Unknown", Gender != "unknown") %>%
+  group_by(Year, Age, Gender, Sport) %>%
+  summarise(
+    total_reach = sum(Reach, na.rm = TRUE),
+    total_impressions = sum(Impressions, na.rm = TRUE),
+    total_link_clicks = sum(LinkClicks, na.rm = TRUE),
+    total_spend = sum(Spend, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  mutate(CTR = (total_link_clicks / total_impressions) * 100)
+
+```
+
+```{r}
+georgemason_demographics <-read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/George Mason Meta Ads Insights by Demographis 2022 - 2025.csv")
+```
+
+```{r}
+gm_demographics_sports <- georgemason_demographics %>% 
+    mutate(Sport = case_when(
+    grepl("FB", CampaignName) ~ "Football",
+    grepl("MBB", CampaignName)|grepl("MBB", AdsetName) ~ "Men's Basketball",
+    grepl("Mini", CampaignName)|grepl("Mini", AdsetName) ~ "Men's Basketball",
+    grepl("WBB", CampaignName) ~ "Women's Basketball",
+    grepl("BA", CampaignName)|grepl("Baseball", AdsetName) ~ "Baseball",
+    grepl("B22", CampaignName) ~ "Baseball",
+    grepl("B23", CampaignName) ~ "Baseball",
+    grepl("Women's Basketball", AdName) ~ "Women's Basketball",
+    grepl("Men's Basketball", AdName) ~ "Men's Basketball",
+    grepl("MBB21", AdName) ~ "Men's Basketball",
+    grepl("M24", AdName) | grepl("M24", CampaignName) ~ "Men's Basketball",  # Added CampaignName check
+    grepl("W24", AdName) | grepl("W24", CampaignName) ~ "Women's Basketball",  # Added CampaignName check
+    grepl("22FB", AdName) | grepl("F22", CampaignName) ~ "Football",
+    grepl("F23", CampaignName) ~ "Football",
+    grepl("F24", CampaignName) ~ "Football",
+    grepl("F25", CampaignName) ~ "Football",
+    grepl("B25", CampaignName) ~ "Baseball",
+    grepl("Men's Volleyball", CampaignName) ~"Men's Volleyball",
+    grepl("WSOC23", CampaignName) ~"Women's Soccer",
+    TRUE ~ "Unknown"
+    ))
+```
+
+```{r}
+gm_demographics_sports_groups_year <- gm_demographics_sports %>%
+  # 1. Create the Year column first
+  mutate(Year = year(date_start)) %>%
+
+  # 2. Apply your filters
+  filter(age != "Unknown") %>%
+  filter(gender != "unknown") %>%
+
+  # 3. Group by Year, Age, Gender, AND Sport
+  group_by(Year, age, gender, Sport) %>%
+
+  # 4. Summarise the data for each group
+  summarise(
+    total_reach = sum(Reach, na.rm = TRUE),
+    total_impressions = sum(Impressions, na.rm = TRUE),
+    total_link_clicks = sum(LinkClicks, na.rm = TRUE),
+    total_spend = sum(Spend, na.rm = TRUE),
+    .groups = 'drop' # Good practice to drop grouping structure after summarise
+  ) %>%
+
+  # 5. Calculate CTR for each summarized group
+  mutate(CTR = (total_link_clicks / total_impressions) * 100)
+```
+
+```{r}
+gm_demographics_sports_groups_year <- gm_demographics_sports_groups_year %>% 
+  rename(Age="age") %>% 
+  rename(Gender = "gender")
+```
+
+```{r}
+fau_demographics <-read.csv("C:/Users/stefa/OneDrive/Documents/Capstone/FAU Meta Ads Insights by Demographics 2022 - 2025.csv")
+```
+
+```{r}
+fau_demographics_sports <- fau_demographics %>% 
+    mutate(Sport = case_when(
+    grepl("Women's Basketball", CampaignName) ~ "Women's Basketball",
+    grepl("Softball", CampaignName) ~ "Softball",
+    grepl("Baseball", CampaignName) ~ "Baseball",
+    grepl("WBB", CampaignName) ~ "Women's Basketball",
+    grepl("Football", CampaignName) ~ "Football",
+    grepl("FB", CampaignName) ~ "Football",
+    grepl("Women's Soccer", CampaignName) ~ "Women's Soccer",
+    grepl("MSOC", CampaignName) ~ "Men's Soccer",
+    grepl("Men's Basketball", CampaignName) ~ "Men's Basketball",
+    grepl("MBB", CampaignName) ~ "Men's Basketball",
+    TRUE ~ "Other"  
+  ))
+```
+
+```{r}
+colnames(fau_demographics_sports)
+```
+
+
+```{r}
+fau_demographics_sports_groups <- fau_demographics_sports %>% 
+  mutate(AdInsightsDate = as.Date(AdInsightsDate)) %>%  # stays in the pipe
+  mutate(Year = year(AdInsightsDate)) %>%               # use AdInsightsDate directly
+  filter(Age != "Unknown", Gender != "unknown") %>% 
+  group_by(Year, Age, Gender, Sport) %>% 
+  summarise(
+    total_reach = sum(Reach, na.rm = TRUE),
+    total_impressions = sum(Impressions, na.rm = TRUE),
+    total_link_clicks = sum(LinkClicks, na.rm = TRUE),
+    total_spend = sum(Spend, na.rm = TRUE),
+    .groups = "drop"
+  ) %>% 
+  mutate(CTR = (total_link_clicks / total_impressions) * 100)
+
+```
+
+```{r}
+combined_data <- bind_rows(
+  mutate(miami_demographics_sports_groups_year, School = "Miami"),
+  mutate(sc_demographics_sports_groups_year, School = "South Carolina"),
+  mutate(stanford_demographics_age_gender_sports_groups, School ="Stanford"),
+  mutate(gm_demographics_sports_groups_year, School = "George Mason"),
+  mutate(fau_demographics_sports_groups, School= "Florida Atlantic")
+)
+```
+
+
+
+```{r}
+ui <- navbarPage("Meta Ads Dashboard by School",
+
+  # --- Miami Tab ---
+  tabPanel("Miami",
+    sidebarLayout(
+      sidebarPanel(
+        selectInput("miami_plot_choice", "Choose a metric to visualize:",
+                    choices = c("Impressions", "Link Clicks", "Reach", "CTR", "Spend")),
+        uiOutput("miami_sport_selector"),
+        selectInput("miami_facet_choice", "Facet by:",
+                    choices = c("Year", "Sport", "Both", "None"),
+                    selected = "Year")
+      ),
+      mainPanel(
+        plotOutput("miami_plot", height = "1000px")
+      )
+    )
+  ),
+
+  # --- South Carolina Tab ---
+  tabPanel("South Carolina",
+    sidebarLayout(
+      sidebarPanel(
+        selectInput("sc_plot_choice", "Choose a metric to visualize:",
+                    choices = c("Impressions", "Link Clicks", "Reach", "CTR", "Spend")),
+        uiOutput("sc_sport_selector"),
+        selectInput("sc_facet_choice", "Facet by:",
+                    choices = c("Year", "Sport", "Both", "None"),
+                    selected = "Year")
+      ),
+      mainPanel(
+        plotOutput("sc_plot", height = "1000px")
+      )
+    )
+  ),
+  # --- Stanford Tab ---
+  tabPanel("Stanford",
+    sidebarLayout(
+      sidebarPanel(
+        selectInput("stanford_plot_choice", "Choose a metric to visualize:",
+                    choices = c("Impressions", "Link Clicks", "Reach", "CTR", "Spend")),
+        uiOutput("stanford_sport_selector"),
+        selectInput("stanford_facet_choice", "Facet by:",
+                    choices = c("Year", "Sport", "Both", "None"),
+                    selected = "Year")
+      ),
+      mainPanel(
+        plotOutput("stanford_plot", height = "1000px")
+      )
+    )
+  ),
+   # --- George Mason Tab ---
+  tabPanel("George Mason",
+    sidebarLayout(
+      sidebarPanel(
+        selectInput("gm_plot_choice", "Choose a metric to visualize:",
+                    choices = c("Impressions", "Link Clicks", "Reach", "CTR", "Spend")),
+        uiOutput("gm_sport_selector"),
+        selectInput("gm_facet_choice", "Facet by:",
+                    choices = c("Year", "Sport", "Both", "None"),
+                    selected = "Year")
+      ),
+      mainPanel(
+        plotOutput("gm_plot", height = "1000px")
+      )
+    )
+  ),
+     # --- FAU Tab ---
+  tabPanel("Florida Atlantic",
+    sidebarLayout(
+      sidebarPanel(
+        selectInput("fau_plot_choice", "Choose a metric to visualize:",
+                    choices = c("Impressions", "Link Clicks", "Reach", "CTR", "Spend")),
+        uiOutput("fau_sport_selector"),
+        selectInput("fau_facet_choice", "Facet by:",
+                    choices = c("Year", "Sport", "Both", "None"),
+                    selected = "Year")
+      ),
+      mainPanel(
+        plotOutput("fau_plot", height = "1000px")
+      )
+    )
+  )
+)
+```
+
+
+
+```{r}
+server <- function(input, output, session) {
+
+  # Miami sport selector
+  output$miami_sport_selector <- renderUI({
+    sports <- combined_data %>%
+      filter(School == "Miami") %>%
+      pull(Sport) %>%
+      unique()
+    selectInput("miami_sport_choice", "Choose a sport to filter:",
+                choices = c("All", sports),
+                selected = sports[1])
+  })
+
+  # SC sport selector
+  output$sc_sport_selector <- renderUI({
+    sports <- combined_data %>%
+      filter(School == "South Carolina") %>%
+      pull(Sport) %>%
+      unique()
+    selectInput("sc_sport_choice", "Choose a sport to filter:",
+                choices = c("All", sports),
+                selected = sports[1])
+  })
+  
+    # Stanford sport selector
+  output$stanford_sport_selector <- renderUI({
+    sports <- combined_data %>%
+      filter(School == "Stanford") %>%
+      pull(Sport) %>%
+      unique()
+    selectInput("stanford_sport_choice", "Choose a sport to filter:",
+                choices = c("All", sports),
+                selected = sports[1])
+  })
+  
+   # George Mason sport selector
+  output$gm_sport_selector <- renderUI({
+    sports <- combined_data %>%
+      filter(School == "George Mason") %>%
+      pull(Sport) %>%
+      unique()
+    selectInput("gm_sport_choice", "Choose a sport to filter:",
+                choices = c("All", sports),
+                selected = sports[1])
+  })
+  
+     # FAU sport selector
+  output$fau_sport_selector <- renderUI({
+    sports <- combined_data %>%
+      filter(School == "Florida Atlantic") %>%
+      pull(Sport) %>%
+      unique()
+    selectInput("fau_sport_choice", "Choose a sport to filter:",
+                choices = c("All", sports),
+                selected = sports[1])
+  })
+
+  # Miami plot
+  output$miami_plot <- renderPlot({
+    plot_school_data("Miami", input$miami_plot_choice, input$miami_sport_choice, input$miami_facet_choice)
+  })
+
+  # South Carolina plot
+  output$sc_plot <- renderPlot({
+    plot_school_data("South Carolina", input$sc_plot_choice, input$sc_sport_choice, input$sc_facet_choice)
+  })
+  
+  # Stanford plot
+  output$stanford_plot <- renderPlot({
+    plot_school_data("Stanford", input$stanford_plot_choice, input$stanford_sport_choice, input$stanford_facet_choice)
+  })
+  
+  # George Mason plot
+  output$gm_plot <- renderPlot({
+    plot_school_data("George Mason", input$gm_plot_choice, input$gm_sport_choice, input$gm_facet_choice)
+  })
+  
+  # FAU plot
+  output$fau_plot <- renderPlot({
+    plot_school_data("Florida Atlantic", input$fau_plot_choice, input$fau_sport_choice, input$fau_facet_choice)
+  })
+
+  # Shared plot function
+  plot_school_data <- function(school, metric, sport, facet) {
+    data <- combined_data %>% filter(School == school)
+    if (sport != "All") {
+      data <- data %>% filter(Sport == sport)
+    }
+
+    base_plot <- ggplot(data, aes(x = Age, fill = Gender)) +
+      geom_bar(stat = "identity", position = "dodge") +
+      theme_minimal()
+
+    base_plot <- switch(facet,
+      "Year" = base_plot + facet_wrap(~ Year),
+      "Sport" = base_plot + facet_wrap(~ Sport),
+      "Both" = base_plot + facet_grid(Sport ~ Year),
+      "None" = base_plot
+    )
+
+    metric_plot <- switch(metric,
+      "Impressions" = base_plot + aes(y = total_impressions) +
+        labs(title = paste("Impressions -", school), y = "Total Impressions"),
+      "Link Clicks" = base_plot + aes(y = total_link_clicks) +
+        labs(title = paste("Link Clicks -", school), y = "Total Link Clicks"),
+      "Reach" = base_plot + aes(y = total_reach) +
+        labs(title = paste("Reach -", school), y = "Total Reach"),
+      "CTR" = base_plot + aes(y = CTR) +
+        labs(title = paste("CTR -", school), y = "CTR (%)"),
+      "Spend" = base_plot + aes(y = total_spend) +
+        labs(title = paste("Spend -", school), y = "Total Spend")
+    )
+
+    if (metric == "Spend") {
+      metric_plot + scale_fill_manual(values = c("female" = "#E41A1C", "male" = "#377EB8")) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    } else {
+      metric_plot + scale_fill_brewer(palette = "Set1")
+    }
+  }
+}
+
+
+shinyApp(ui = ui, server = server)
+
+```
+
