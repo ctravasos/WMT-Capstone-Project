@@ -1,0 +1,434 @@
+---
+title: "Final Capstone"
+author: "Ryan Steffe"
+date: "2025-04-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#General R Tips
+```{r}
+#Tip 1: Ensure all the packages needed such as dplyr are installed first. Utilize the code: install.packages('package_name') in the console
+
+#Tip 2: Load in the necessary libraries such as dplyr needed before performing data analysis. Utilize the code: library(package_name)
+
+#Tip 3: If using an r markdown file (file_name.rmd) rather than an r script (file_name.r), use on a windows the shortcut ('Ctrl + alt + i') to create a chunk. For the code to run in an r markdown file, it must be in a chunk
+
+#Tip 4: Use the pound/hashtag symbol ('#") to write notes within the code. The text after the pound symbol will not be considered code, therefore will not run. Also, one can tell the text is coded out because the information will be italicized and a different font color
+
+#Tip 5: The r markdown file can be converted into a pdf or html through the 'Knit' element. Simply click 'Knit' (Near the top of the screen) and then either 'Knit to Html' or 'Knit to PDF'
+
+#Tip 6: R is case sensitive
+```
+
+#Step 1: Load the necessary libraries
+```{r}
+library(dplyr) #dplyr is a data manipulation package
+library(data.table) #data.table can be used to create enhanced dataframes and data manipulation
+library(ggplot2) #ggplot2 is a data visualization package
+library(xgboost) #xgboost is a machine learning package for gradient boosting
+library(randomForest) #randomForest is a machine learning package for the random forest algorithm
+library(lubridate) #lubridate is used to work with date and times
+library(readr) #readr is used to load in delimited files such as .csv files
+library(tidyverse) #tidyverse is a data manipulation and exploration package
+library(tidyr) #tidyr is a package for tidying data (Ex: Transformations, missing values)
+library(caret) #caret is a machine learning package
+library(shiny) #Shiny is a web application package
+library(DT) #Provides an interface to the JavaScript library DataTables
+library(plotly) #plotly is an interactive data visualization package
+```
+
+#Step 2: Load in all the Datasets
+```{r}
+#Note: The file path directory could/will be different for everyone depending on where the file is stored
+
+#Tip: Locate the file within File Explorer. Copy and past the file path/directory (At the top of file explorer) into the code. Please note that the backslashes ('\') will have to be changed to slashes ('/'). See the example code below
+
+FAU <- read.csv("C:/Users/rstef/OneDrive/Notre Dame/Spring Semester/Capstone/Data/FAU.csv")
+Stanford <- read.csv("C:/Users/rstef/OneDrive/Notre Dame/Spring Semester/Capstone/Data/StanfordData.csv")
+Miami <- read.csv("C:/Users/rstef/OneDrive/Notre Dame/Spring Semester/Capstone/Data/MiamiData.csv")
+Clemson <- read.csv("C:/Users/rstef/OneDrive/Notre Dame/Spring Semester/Capstone/Data/ClemsonData.csv")
+GeorgeMason <- read.csv("C:/Users/rstef/OneDrive/Notre Dame/Spring Semester/Capstone/Data/GeorgeMason.csv")
+SouthCarolina <- read.csv("C:/Users/rstef/OneDrive/Notre Dame/Spring Semester/Capstone/Data/SouthCarolina.csv")
+```
+
+#Step 3: Clean and Manipulate the data
+```{r}
+#Clean and process data - Stanford
+Stanford <- Stanford %>%
+  filter(!is.na(LCTR), !is.na(clickroi28), !is.na(Spend), !is.na(Impressions)) %>%
+  filter(LCTR != 1 & LCTR > 0.01) %>%
+  mutate(Impressions_new = Impressions / LCTR)
+
+#Assign sports based on CampaignName
+Stanford <- Stanford %>%
+  mutate(Sport = case_when(
+    str_detect(CampaignName, "MBB|Men's Basketball") ~ "Men's Basketball",
+    str_detect(CampaignName, "WBB|Women's Basketball") ~ "Women's Basketball",
+    str_detect(CampaignName, "FB|Football") ~ "Football",
+    str_detect(CampaignName, "SB|Softball") ~ "Softball",
+    str_detect(CampaignName, "BSB|Baseball") ~ "Baseball",
+    str_detect(CampaignName, "MS|Men's Soccer") ~ "Men's Soccer",
+    str_detect(CampaignName, "WS|Women's Soccer") ~ "Women's Soccer",
+    str_detect(CampaignName, "V24|Volleyball") ~ "Volleyball",
+    str_detect(CampaignName, "WG|Gymnastics") ~ "Gymnastics",
+    str_detect(CampaignName, "MWP|Water Polo") ~ "Water Polo",
+    str_detect(CampaignName, "Track|XC") ~ "Track & Field / XC",
+    TRUE ~ "Other"
+  ))
+
+#Clean and process data - Miami
+Miami <- Miami %>%
+  filter(!is.na(LCTR), !is.na(clickroi28), !is.na(Spend), !is.na(Impressions)) %>%
+  filter(LCTR != 1 & LCTR > 0.01) %>%
+  mutate(Impressions_new = Impressions / LCTR)
+
+#Assign sports based on CampaignName
+Miami <- Miami %>%
+  mutate(Sport = case_when(
+    grepl("FB", CampaignName) ~ "Football",
+    grepl("MBB", CampaignName) ~ "Men's Basketball",
+    grepl("WBB", CampaignName) ~ "Women's Basketball",
+    grepl("BA", CampaignName) ~ "Baseball",
+    grepl("B22", CampaignName) ~ "Baseball",
+    grepl("B23", CampaignName) ~ "Baseball",
+    grepl("Women's Basketball", AdName) ~ "Women's Basketball",
+    grepl("Men's Basketball", AdName) ~ "Men's Basketball",
+    grepl("MBB21", AdName) ~ "Men's Basketball",
+    grepl("M24", AdName) | grepl("M24", CampaignName) ~ "Men's Basketball",  # Added CampaignName check
+    grepl("W24", AdName) | grepl("W24", CampaignName) ~ "Women's Basketball",  # Added CampaignName check
+    grepl("22FB", AdName) | grepl("F22", CampaignName) ~ "Football",
+    grepl("F23", CampaignName) ~ "Football",
+    grepl("F24", CampaignName) ~ "Football",
+    grepl("F25", CampaignName) ~ "Football",
+    grepl("B25", CampaignName) ~ "Baseball",
+    grepl("Season Ticket Holder Benefits", CampaignName) & AdsetName == "Lookalike" ~ "Football",
+    TRUE ~ "Unknown"
+  ))
+
+#Clean and process data - South Carolina
+SouthCarolina <- SouthCarolina %>%
+  filter(!is.na(LCTR), !is.na(clickroi28), !is.na(Spend), !is.na(Impressions)) %>%
+  filter(LCTR != 1 & LCTR > 0.01) %>%
+  mutate(Impressions_new = Impressions / LCTR)
+
+SouthCarolina <- SouthCarolina %>%
+  mutate(Sport = case_when(
+    grepl("FB", CampaignName) ~ "Football",
+    grepl("MBB", CampaignName) ~ "Men's Basketball",
+    grepl("WBB", CampaignName) ~ "Women's Basketball",
+    grepl("BA", CampaignName) ~ "Baseball",
+    grepl("B22", CampaignName) ~ "Baseball",
+    grepl("B23", CampaignName) ~ "Baseball",
+    grepl("Baseball", CampaignName) ~ "Baseball",
+    grepl("Women's Basketball", AdName) ~ "Women's Basketball",
+    grepl("Men's Basketball", AdName) ~ "Men's Basketball",
+    grepl("MBB24", AdName) ~ "Men's Basketball",
+    grepl("M24", AdName) | grepl("M24", CampaignName) ~ "Men's Basketball",  # Added CampaignName check
+    grepl("W24", AdName) | grepl("W24", CampaignName) ~ "Women's Basketball",  # Added CampaignName check
+    grepl("22FB", AdName) | grepl("F22", CampaignName) | grepl("FB22", AdName) ~ "Football",
+    grepl("FB23", CampaignName) ~ "Football",
+    grepl("FB24", CampaignName) ~ "Football",
+    grepl("FB25", CampaignName) ~ "Football",
+    grepl("B25", CampaignName) ~ "Baseball",
+    TRUE ~ "Unknown"
+  ))
+
+#Clean and process data - George Mason
+GeorgeMason <- GeorgeMason %>%
+  filter(!is.na(LCTR), !is.na(clickroi28), !is.na(Spend.x), !is.na(Impressions)) %>%
+  filter(LCTR != 1 & LCTR > 0.01) %>%
+  mutate(Impressions_new = Impressions / LCTR)
+
+GeorgeMason <- GeorgeMason %>% 
+  mutate(Sport = case_when(
+    grepl("FB", CampaignName) ~ "Football",
+    grepl("MBB", CampaignName) | grepl("MBB", AdSetName) ~ "Men's Basketball",
+    grepl("Mini", CampaignName) | grepl("Mini", AdSetName) ~ "Men's Basketball",
+    grepl("WBB", CampaignName) ~ "Women's Basketball",
+    grepl("BA", CampaignName) | grepl("Baseball", AdSetName) ~ "Baseball",
+    grepl("B22", CampaignName) ~ "Baseball",
+    grepl("B23", CampaignName) ~ "Baseball",
+    grepl("Women's Basketball", AdName) ~ "Women's Basketball",
+    grepl("Men's Basketball", AdName) ~ "Men's Basketball",
+    grepl("MBB21", AdName) ~ "Men's Basketball",
+    grepl("M24", AdName) | grepl("M24", CampaignName) ~ "Men's Basketball",  # Added CampaignName check
+    grepl("W24", AdName) | grepl("W24", CampaignName) ~ "Women's Basketball",  # Added CampaignName check
+    grepl("22FB", AdName) | grepl("F22", CampaignName) ~ "Football",
+    grepl("F23", CampaignName) ~ "Football",
+    grepl("F24", CampaignName) ~ "Football",
+    grepl("F25", CampaignName) ~ "Football",
+    grepl("B25", CampaignName) ~ "Baseball",
+    grepl("Men's Volleyball", CampaignName) ~ "Men's Volleyball",
+    grepl("WSOC23", CampaignName) ~ "Women's Soccer",
+    TRUE ~ "Unknown"
+  ))
+
+#Clean and process data - Clemson
+Clemson <- Clemson %>%
+  filter(!is.na(LCTR), !is.na(clickroi28), !is.na(Spend), !is.na(Impressions)) %>%
+  filter(LCTR != 1 & LCTR > 0.01) %>%
+  mutate(Impressions_new = Impressions / LCTR)
+
+Clemson <- Clemson %>% 
+  mutate(Sport = case_when(
+    grepl("FB", CampaignName) ~ "Football",
+    grepl("MBB", CampaignName) | grepl("MBB", AdsetName) ~ "Men's Basketball",
+    grepl("Mini", CampaignName) | grepl("Mini", AdsetName) ~ "Men's Basketball",
+    grepl("WBB", CampaignName) ~ "Women's Basketball",
+    grepl("BA", CampaignName) | grepl("Baseball", AdsetName) ~ "Baseball",
+    grepl("B22", CampaignName) ~ "Baseball",
+    grepl("B23", CampaignName) ~ "Baseball",
+    grepl("Women's Basketball", AdName) ~ "Women's Basketball",
+    grepl("Men's Basketball", AdName) ~ "Men's Basketball",
+    grepl("MBB21", AdName) ~ "Men's Basketball",
+    grepl("M24", AdName) | grepl("M24", CampaignName) ~ "Men's Basketball",  # Added CampaignName check
+    grepl("W24", AdName) | grepl("W24", CampaignName) ~ "Women's Basketball",  # Added CampaignName check
+    grepl("22FB", AdName) | grepl("F22", CampaignName) ~ "Football",
+    grepl("F23", CampaignName) ~ "Football",
+    grepl("F24", CampaignName) ~ "Football",
+    grepl("F25", CampaignName) ~ "Football",
+    grepl("B25", CampaignName) ~ "Baseball",
+    grepl("Men's Volleyball", CampaignName) ~ "Men's Volleyball",
+    grepl("WSOC23", CampaignName) ~ "Women's Soccer",
+    TRUE ~ "Unknown"
+  ))
+
+#Clean and process data - FAU
+FAU <- FAU %>%
+  filter(!is.na(LCTR), !is.na(clickroi28), !is.na(Spend), !is.na(Impressions)) %>%
+  filter(LCTR != 1 & LCTR > 0.01) %>%
+  mutate(Impressions_new = Impressions / LCTR)
+
+FAU <- FAU %>% 
+  mutate(Sport = case_when(
+    grepl("FB", CampaignName) ~ "Football",
+    grepl("MBB", CampaignName) | grepl("MBB", AdsetName) ~ "Men's Basketball",
+    grepl("Mini", CampaignName) | grepl("Mini", AdsetName) ~ "Men's Basketball",
+    grepl("WBB", CampaignName) ~ "Women's Basketball",
+    grepl("BA", CampaignName) | grepl("Baseball", AdsetName) ~ "Baseball",
+    grepl("B22", CampaignName) ~ "Baseball",
+    grepl("B23", CampaignName) ~ "Baseball",
+    grepl("Women's Basketball", AdName) ~ "Women's Basketball",
+    grepl("Men's Basketball", AdName) ~ "Men's Basketball",
+    grepl("MBB21", AdName) ~ "Men's Basketball",
+    grepl("M24", AdName) | grepl("M24", CampaignName) ~ "Men's Basketball",  # Added CampaignName check
+    grepl("W24", AdName) | grepl("W24", CampaignName) ~ "Women's Basketball",  # Added CampaignName check
+    grepl("22FB", AdName) | grepl("F22", CampaignName) ~ "Football",
+    grepl("F23", CampaignName) ~ "Football",
+    grepl("F24", CampaignName) ~ "Football",
+    grepl("F25", CampaignName) ~ "Football",
+    grepl("B25", CampaignName) ~ "Baseball",
+    grepl("Men's Volleyball", CampaignName) ~ "Men's Volleyball",
+    grepl("WSOC23", CampaignName) ~ "Women's Soccer",
+    TRUE ~ "Unknown"
+  ))
+
+#Creating a new column 'University'
+Stanford <- Stanford %>%
+  mutate(University = "Stanford")
+
+Miami <- Miami %>%
+  mutate(University = "Miami")
+
+SouthCarolina <- SouthCarolina %>%
+  mutate(University = "South Carolina")
+
+GeorgeMason <- GeorgeMason %>%
+  mutate(University = "George Mason")
+
+Clemson <- Clemson %>%
+  mutate(University = "Clemson")
+
+FAU <- FAU %>%
+  mutate(University = "FAU")
+```
+
+#Step 4: Combine all the datasets before Shiny is utilized
+```{r}
+costs_expenses_all <- bind_rows(Stanford, Miami, SouthCarolina, GeorgeMason, Clemson, FAU)
+```
+
+#Step 5: Run the Shiny UI
+```{r}
+#UI
+ui <- fluidPage(
+  titlePanel("University Sports ROI Explorer"),
+
+  tabsetPanel(
+    tabPanel("Overview",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("university", "Select University:",
+                      choices = sort(unique(costs_expenses_all$University)),
+                      selected = unique(costs_expenses_all$University)[1]),
+          selectInput("sport", "Select Sport:", choices = NULL),
+          selectInput("campaign_name", "Select Campaign Name:", choices = NULL)
+        ),
+        mainPanel(
+          h4("Instructions"),
+          p("Use the dropdowns to filter the data by university, sport, and campaign name."),
+          p("Then switch to the Data Table or ROI Visualization tabs to explore the results.")
+        )
+      )
+    ),
+
+    tabPanel("Data Table", 
+      DTOutput("data_table")
+    ),
+
+    tabPanel("ROI Visualization",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("university_roi", "Select University:",
+                      choices = sort(unique(costs_expenses_all$University)),
+                      selected = unique(costs_expenses_all$University)[1]),
+          selectInput("sport_roi", "Select Sport:", choices = NULL),
+          selectInput("campaign_name_roi", "Select Campaign Name:", choices = NULL)
+        ),
+        mainPanel(
+          h4("Average ROI by Type"),
+          plotOutput("roi_plot_avg"),
+          br(),
+          h4("ROI Distribution by Type"),
+          plotOutput("roi_plot_box"),
+          br(),
+          h4("Spend vs Impressions by Campaign"),
+          plotlyOutput("roi_bubble_plot")
+        )
+      )
+    )
+  )
+)
+
+#Server
+server <- function(input, output, session) {
+
+  #Update Sport dropdowns based on selected university
+  observeEvent(input$university, {
+    sports <- costs_expenses_all %>%
+      filter(University == input$university) %>%
+      pull(Sport) %>%
+      unique() %>%
+      sort()
+    updateSelectInput(session, "sport", choices = sports, selected = sports[1])
+  })
+
+  observeEvent(input$university_roi, {
+    sports <- costs_expenses_all %>%
+      filter(University == input$university_roi) %>%
+      pull(Sport) %>%
+      unique() %>%
+      sort()
+    updateSelectInput(session, "sport_roi", choices = sports, selected = sports[1])
+  })
+
+  #Update Campaign dropdowns based on university and sport
+  observeEvent(input$sport, {
+    names <- costs_expenses_all %>%
+      filter(University == input$university, Sport == input$sport) %>%
+      pull(CampaignName) %>%
+      unique() %>%
+      sort()
+    updateSelectInput(session, "campaign_name", choices = c("All", names), selected = "All")
+  })
+
+  observeEvent(input$sport_roi, {
+    names <- costs_expenses_all %>%
+      filter(University == input$university_roi, Sport == input$sport_roi) %>%
+      pull(CampaignName) %>%
+      unique() %>%
+      sort()
+    updateSelectInput(session, "campaign_name_roi", choices = c("All", names), selected = "All")
+  })
+
+  #Reactives
+  filtered_data <- reactive({
+    df <- costs_expenses_all %>%
+      filter(University == input$university, Sport == input$sport)
+    if (input$campaign_name != "All") {
+      df <- df %>% filter(CampaignName == input$campaign_name)
+    }
+    df
+  })
+
+  filtered_data_roi <- reactive({
+    df <- costs_expenses_all %>%
+      filter(University == input$university_roi, Sport == input$sport_roi)
+    if (input$campaign_name_roi != "All") {
+      df <- df %>% filter(CampaignName == input$campaign_name_roi)
+    }
+    df
+  })
+
+  #Data Table
+  output$data_table <- renderDT({
+    datatable(filtered_data(), options = list(pageLength = 10))
+  })
+
+  #ROI Avg Bar Plot
+  output$roi_plot_avg <- renderPlot({
+    df <- filtered_data_roi()
+    if (nrow(df) > 0) {
+      roi_df <- df %>%
+        select(viewroi28, viewroi7, viewroi1,
+               clickroi28, clickroi7, clickroi1) %>%
+        pivot_longer(cols = everything(), names_to = "ROI_Type", values_to = "Value") %>%
+        group_by(ROI_Type) %>%
+        summarise(Value = mean(Value, na.rm = TRUE))
+
+      ggplot(roi_df, aes(x = ROI_Type, y = Value, fill = ROI_Type)) +
+        geom_bar(stat = "identity") +
+        theme_minimal() +
+        labs(title = "Average ROI by Type", y = "ROI", x = "ROI Type") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
+  })
+
+  #ROI Distribution Box Plot
+  output$roi_plot_box <- renderPlot({
+    df <- filtered_data_roi()
+    if (nrow(df) > 0) {
+      roi_df <- df %>%
+        select(viewroi28, viewroi7, viewroi1,
+               clickroi28, clickroi7, clickroi1) %>%
+        pivot_longer(cols = everything(), names_to = "ROI_Type", values_to = "Value")
+
+      ggplot(roi_df, aes(x = ROI_Type, y = Value, fill = ROI_Type)) +
+        geom_boxplot() +
+        theme_minimal() +
+        labs(title = "ROI Distribution by Type", y = "ROI", x = "ROI Type") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
+  })
+
+  #Bubble Plot
+  output$roi_bubble_plot <- renderPlotly({
+    df <- filtered_data_roi()
+    if (nrow(df) > 0 && "Spend" %in% names(df) && "Impressions" %in% names(df)) {
+      plot_ly(
+        data = df,
+        x = ~Spend,
+        y = ~Impressions,
+        type = 'scatter',
+        mode = 'markers',
+        size = ~Impressions,
+        color = ~CampaignName,
+        text = ~paste("Campaign:", CampaignName,
+                      "<br>Spend:", Spend,
+                      "<br>Impressions:", Impressions)
+      ) %>%
+      layout(title = "Spend vs Impressions by Campaign",
+             xaxis = list(title = "Spend"),
+             yaxis = list(title = "Impressions"))
+    }
+  })
+}
+
+#Run the app
+shinyApp(ui, server)
+```
+
