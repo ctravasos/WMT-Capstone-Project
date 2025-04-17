@@ -1,0 +1,284 @@
+---
+title: "Merged shiny"
+output: html_document
+date: "2025-04-10"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(shiny)
+library(tidyverse)
+library(DT)
+library(plotly)
+
+# UI
+ui <- fluidPage(
+  titlePanel("University Sports ROI Explorer"),
+
+  tabsetPanel(
+    tabPanel("Overview",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("university", "Select University:",
+                      choices = sort(unique(costs_expenses_all$University)),
+                      selected = unique(costs_expenses_all$University)[1]),
+          selectInput("sport", "Select Sport:", choices = NULL),
+          selectInput("campaign_name", "Select Campaign Name:", choices = NULL)
+        ),
+        mainPanel(
+          h4("Instructions"),
+  tags$ul(
+    tags$li("Use the dropdowns to filter the data by university, sport, and campaign name."),
+    tags$li("Navigate between the tabs to explore different metrics and visualizations:")
+  ),
+  tags$br(),
+  tags$ul(
+    tags$li(tags$b("Summary Statistics:"), " View aggregated ROI, spend, and impressions by campaign."),
+    tags$li(tags$b("ROI Visualization:"), " Visualize ROI performance by timeframe, distribution, and campaign-level engagement."),
+    tags$li(tags$b("ROI by Platform:"), " Compare ROI across publisher and device platforms.")
+  ),
+  tags$br(),
+  tags$p("Use this tool to identify trends, evaluate campaign effectiveness, and compare performance across different marketing platforms.")
+        )
+      )
+    ),
+
+    tabPanel("Summary Statistics",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("university_overview", "Select University:",
+                      choices = sort(unique(costs_expenses_all$University)),
+                      selected = unique(costs_expenses_all$University)[1]),
+          selectInput("sport_overview", "Select Sport:", choices = NULL)
+        ),
+        mainPanel(
+          h4("Summary Statistics by Campaign"),
+          DTOutput("overview_table")
+        )
+      )
+    ),
+
+    tabPanel("ROI Visualization",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("university_roi", "Select University:",
+                      choices = sort(unique(costs_expenses_all$University)),
+                      selected = unique(costs_expenses_all$University)[1]),
+          selectInput("sport_roi", "Select Sport:", choices = NULL),
+          selectInput("campaign_name_roi", "Select Campaign Name:", choices = NULL)
+        ),
+        mainPanel(
+          h4("Average ROI by Type"),
+          plotOutput("roi_plot_avg"),
+          br(),
+          h4("ROI Distribution by Type"),
+          plotOutput("roi_plot_box"),
+          br(),
+          h4("Spend vs Impressions by Campaign"),
+          plotlyOutput("roi_bubble_plot")
+        )
+      )
+    ),
+
+    tabPanel("ROI by Platform",
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("platform_univ", "Select University:",
+                      choices = sort(unique(costs_expenses_all$University)),
+                      selected = unique(costs_expenses_all$University)[1]),
+          selectInput("platform_sport", "Select Sport:", choices = NULL),
+          selectInput("platform_campaign", "Select Campaign Name:", choices = NULL)
+        ),
+        mainPanel(
+          h4("Publisher Platform ROI Overview"),
+          plotlyOutput("platform_roi_plot"),
+          br(),
+          h4("Average Click ROI7 by Device Platform"),
+          plotlyOutput("device_platform_bar_plot")
+        )
+      )
+    )
+  )
+)
+
+# Server
+server <- function(input, output, session) {
+  observeEvent(input$university, {
+    sports <- costs_expenses_all %>% filter(University == input$university) %>% pull(Sport) %>% unique() %>% sort()
+    updateSelectInput(session, "sport", choices = c("All", sports), selected = "All")
+  })
+
+  observeEvent(input$sport, {
+    names <- costs_expenses_all %>%
+      filter(University == input$university) %>%
+      { if (input$sport != "All") filter(., Sport == input$sport) else . } %>%
+      pull(CampaignName) %>% unique() %>% sort()
+    updateSelectInput(session, "campaign_name", choices = c("All", names), selected = "All")
+  })
+
+  observeEvent(input$university_overview, {
+    sports <- costs_expenses_all %>% filter(University == input$university_overview) %>% pull(Sport) %>% unique() %>% sort()
+    updateSelectInput(session, "sport_overview", choices = c("All", sports), selected = "All")
+  })
+
+  filtered_data_overview <- reactive({
+    df <- costs_expenses_all %>% filter(University == input$university_overview)
+    if (input$sport_overview != "All") df <- df %>% filter(Sport == input$sport_overview)
+    df
+  })
+
+  output$overview_table <- renderDT({
+    df <- filtered_data_overview()
+    if (nrow(df) > 0) {
+      summary_df <- df %>%
+        group_by(CampaignName) %>%
+        summarise(
+          ClickROI1 = mean(clickroi1, na.rm = TRUE),
+          ClickROI7 = mean(clickroi7, na.rm = TRUE),
+          ClickROI28 = mean(clickroi28, na.rm = TRUE),
+          ViewROI1 = mean(viewroi1, na.rm = TRUE),
+          ViewROI7 = mean(viewroi7, na.rm = TRUE),
+          ViewROI28 = mean(viewroi28, na.rm = TRUE),
+          TotalImpressions = sum(Impressions_new, na.rm = TRUE),
+          TotalSpend = sum(Spend, na.rm = TRUE),
+          .groups = "drop"
+        )
+      datatable(summary_df, options = list(pageLength = 10))
+    }
+  })
+
+  observeEvent(input$university_roi, {
+    sports <- costs_expenses_all %>% filter(University == input$university_roi) %>% pull(Sport) %>% unique() %>% sort()
+    updateSelectInput(session, "sport_roi", choices = c("All", sports), selected = "All")
+  })
+
+  observeEvent(input$sport_roi, {
+    names <- costs_expenses_all %>%
+      filter(University == input$university_roi) %>%
+      { if (input$sport_roi != "All") filter(., Sport == input$sport_roi) else . } %>%
+      pull(CampaignName) %>% unique() %>% sort()
+    updateSelectInput(session, "campaign_name_roi", choices = c("All", names), selected = "All")
+  })
+
+  filtered_data_roi <- reactive({
+    df <- costs_expenses_all %>% filter(University == input$university_roi)
+    if (input$sport_roi != "All") df <- df %>% filter(Sport == input$sport_roi)
+    if (input$campaign_name_roi != "All") df <- df %>% filter(CampaignName == input$campaign_name_roi)
+    df
+  })
+
+  observeEvent(input$platform_univ, {
+    sports <- costs_expenses_all %>% filter(University == input$platform_univ) %>% pull(Sport) %>% unique() %>% sort()
+    updateSelectInput(session, "platform_sport", choices = c("All", sports), selected = "All")
+  })
+
+  observeEvent(input$platform_sport, {
+    names <- costs_expenses_all %>%
+      filter(University == input$platform_univ) %>%
+      { if (input$platform_sport != "All") filter(., Sport == input$platform_sport) else . } %>%
+      pull(CampaignName) %>% unique() %>% sort()
+    updateSelectInput(session, "platform_campaign", choices = c("All", names), selected = "All")
+  })
+
+  filtered_data_platform <- reactive({
+    df <- costs_expenses_all %>% filter(University == input$platform_univ)
+    if (input$platform_sport != "All") df <- df %>% filter(Sport == input$platform_sport)
+    if (input$platform_campaign != "All") df <- df %>% filter(CampaignName == input$platform_campaign)
+    df
+  })
+
+  output$roi_plot_avg <- renderPlot({
+    df <- filtered_data_roi()
+    if (nrow(df) > 0) {
+      roi_df <- df %>%
+        select(viewroi28, viewroi7, viewroi1, clickroi28, clickroi7, clickroi1) %>%
+        pivot_longer(everything(), names_to = "ROI_Type", values_to = "Value") %>%
+        mutate(
+          Type = ifelse(str_detect(ROI_Type, "click"), "Click ROI", "View ROI"),
+          Timeframe = factor(str_extract(ROI_Type, "\\d+"), levels = c("1", "7", "28"))
+        ) %>%
+        group_by(Type, Timeframe) %>%
+        summarise(Avg_ROI = mean(Value, na.rm = TRUE), .groups = "drop")
+
+      ggplot(roi_df, aes(x = Timeframe, y = Avg_ROI, fill = Type)) +
+        geom_bar(stat = "identity", position = "dodge") +
+        labs(title = "Average ROI by Type and Timeframe", y = "Average ROI", x = "Timeframe (days)") +
+        theme_minimal()
+    }
+  })
+
+  output$roi_plot_box <- renderPlot({
+    df <- filtered_data_roi()
+    if (nrow(df) > 0) {
+      roi_df <- df %>%
+        select(viewroi28, viewroi7, viewroi1, clickroi28, clickroi7, clickroi1) %>%
+        pivot_longer(everything(), names_to = "ROI_Type", values_to = "Value") %>%
+        mutate(ROI_Type = factor(ROI_Type, levels = c("clickroi1", "clickroi7", "clickroi28", "viewroi1", "viewroi7", "viewroi28")))
+
+      ggplot(roi_df, aes(x = ROI_Type, y = Value, fill = ROI_Type)) +
+        geom_boxplot() +
+        labs(title = "ROI Distribution by Type", x = "ROI Type", y = "Value") +
+        theme_minimal() +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
+  })
+
+  output$roi_bubble_plot <- renderPlotly({
+    df <- filtered_data_roi()
+    if (nrow(df) > 0 && "Spend" %in% names(df) && "Impressions_new" %in% names(df)) {
+      plot_ly(
+        data = df,
+        x = ~Spend,
+        y = ~Impressions_new,
+        type = 'scatter',
+        mode = 'markers',
+        size = ~Impressions_new,
+        color = ~CampaignName,
+        text = ~paste("Campaign:", CampaignName,
+                      "<br>Spend:", Spend,
+                      "<br>Impressions:", Impressions_new)
+      ) %>%
+        layout(title = "Spend vs Impressions by Campaign",
+               xaxis = list(title = "Spend"),
+               yaxis = list(title = "Impressions"))
+    }
+  })
+
+  output$platform_roi_plot <- renderPlotly({
+    df <- filtered_data_platform()
+    if (nrow(df) > 0 && "PublisherPlatform" %in% names(df)) {
+      roi_df <- df %>%
+        group_by(PublisherPlatform) %>%
+        summarise(
+          AvgClickROI = mean(clickroi7, na.rm = TRUE),
+          AvgViewROI = mean(viewroi7, na.rm = TRUE),
+          .groups = "drop"
+        ) %>%
+        pivot_longer(cols = starts_with("Avg"), names_to = "Type", values_to = "Value")
+
+      plot_ly(roi_df, x = ~PublisherPlatform, y = ~Value, color = ~Type, type = "bar", barmode = "group") %>%
+        layout(title = "Average ROI by Publisher Platform (7-day)",
+               xaxis = list(title = "Publisher Platform"),
+               yaxis = list(title = "ROI"))
+    }
+  })
+
+  output$device_platform_bar_plot <- renderPlotly({
+    df <- filtered_data_platform()
+    if (nrow(df) > 0 && "DevicePlatform" %in% names(df) && "clickroi7" %in% names(df)) {
+      df_summary <- df %>% group_by(DevicePlatform) %>% summarise(AvgClickROI7 = mean(clickroi7, na.rm = TRUE), .groups = "drop")
+
+      plot_ly(df_summary, x = ~DevicePlatform, y = ~AvgClickROI7, type = "bar") %>%
+        layout(title = "Average Click ROI7 by Device Platform",
+               xaxis = list(title = "Device Platform"),
+               yaxis = list(title = "Average Click ROI7"))
+    }
+  })
+}
+
+# Run the app
+shinyApp(ui, server)
+```
